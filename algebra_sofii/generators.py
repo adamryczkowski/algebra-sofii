@@ -110,17 +110,23 @@ def random_expression(
 
 
 def random_nonzero_expression(
-    random_stream, complexity_target: float, true_x: int
+    random_stream, complexity_target: float, true_x: int, exclude_unknown: bool = False
 ) -> Expression:
     """
     Generate a random expression that evaluates to something other than zero.
     Attempts multiple times to avoid zero-valued expressions.
+
+    Args:
+        random_stream: Random number generator
+        complexity_target: Target complexity for the expression
+        true_x: Value to test the expression against to ensure it's non-zero
+        exclude_unknown: If True, generates expressions without the unknown variable x
     """
     max_attempts = 10
     for _ in range(max_attempts):
         # Use slightly lower complexity target to allow for attempts
         actual_target = min(complexity_target, 4.0)
-        expr = random_expression(random_stream, actual_target)
+        expr = random_expression(random_stream, actual_target, exclude_unknown)
         try:
             value = expr.evaluate(true_x)
             if value != 0:

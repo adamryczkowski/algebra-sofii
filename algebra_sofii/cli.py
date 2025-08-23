@@ -70,8 +70,10 @@ def add_simple_complications(
         )
 
         # Generate a small random expression for the complication
+        # For MULTIPLY_BY_ONE, exclude unknown to prevent creating quadratic equations
+        exclude_unknown = complication_type == OperationType.MULTIPLY_BY_ONE
         complication_expr = random_nonzero_expression(
-            random_stream, 2.0, random_stream.randint(1, 5)
+            random_stream, 2.0, random_stream.randint(1, 5), exclude_unknown
         )
 
         try:

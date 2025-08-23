@@ -15,6 +15,7 @@ from algebra_sofii.expressions import (
     Unknown,
 )
 from algebra_sofii.generators import random_expression, random_nonzero_expression
+from algebra_sofii.cli import generate_equation_with_complexity
 
 
 class TestRandomExpression:
@@ -178,3 +179,26 @@ class TestGeneratorIntegration:
 
             # Should be roughly in the expected range
             assert calculated_complexity <= target_complexity + 3.0
+
+    def test_equation_generation_maintains_linearity(self, random_stream):
+        """Test that equation generation with complications maintains linearity."""
+        # Test multiple complexity levels to ensure we don't generate quadratic equations
+        for complexity in [10.0, 20.0, 30.0, 50.0]:
+            for solution in [1, 5, 10]:
+                equation = generate_equation_with_complexity(
+                    random_stream, solution, complexity
+                )
+
+                # Check that the maximum power of x in the equation is 1 (linear)
+                max_power = equation.maximum_power_of_unknown()
+                assert max_power <= 1, (
+                    f"Generated equation with complexity {complexity} has degree {max_power} "
+                    f"(should be ≤ 1 for linear equations): {equation}"
+                )
+
+                # Verify the solution is still correct
+                left_val = equation.left.evaluate(solution)
+                right_val = equation.right.evaluate(solution)
+                assert abs(left_val - right_val) < 1e-10, (
+                    f"Solution x={solution} doesn't satisfy equation {equation}"
+                )
