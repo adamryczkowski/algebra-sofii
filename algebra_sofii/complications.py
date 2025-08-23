@@ -217,7 +217,7 @@ class EquationWithSolution:
         self._cached_current_form = current
 
     def random_complication(
-        self, max_complexity: float, random_stream=None
+        self, max_complexity: float, random_stream=None, maintain_linearity: bool = True
     ) -> Complication:
         """Generate a random complication within complexity limits."""
         if random_stream is None:
@@ -252,7 +252,10 @@ class EquationWithSolution:
 
             # Generate expression with appropriate complexity
             target_complexity = min(remaining_complexity / 2, 3.0)
-            expr = random_expression(random_stream, target_complexity)
+
+            # For MULTIPLY_BY_ONE, exclude unknown to maintain linearity
+            exclude_unknown = operation == OperationType.MULTIPLY_BY_ONE
+            expr = random_expression(random_stream, target_complexity, exclude_unknown)
 
             return ExpressionComplication(index, operation, expr)
 
@@ -263,7 +266,11 @@ class EquationWithSolution:
 
             # Generate expression with appropriate complexity
             target_complexity = min(remaining_complexity / 3, 2.0)
-            expr = random_expression(random_stream, target_complexity)
+
+            # If maintaining linearity, exclude unknown from equation complications too
+            # This prevents x * (expression with x) = quadratic terms
+            exclude_unknown = maintain_linearity and operation == OperationType.MULTIPLY
+            expr = random_expression(random_stream, target_complexity, exclude_unknown)
 
             return EquationComplication(operation, expr)
 

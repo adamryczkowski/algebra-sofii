@@ -32,6 +32,11 @@ class Expression(ABC):
     """Base class for all algebraic expressions."""
 
     @abstractmethod
+    def maximum_power_of_unknown(self) -> int:
+        """Return the maximum power of the unknown variable in this expression."""
+        pass
+
+    @abstractmethod
     def to_sympy_expr(self) -> sp.Expr:
         """Convert to sympy expression."""
         pass
@@ -100,6 +105,10 @@ class Integer(Expression):
         """The integer value."""
         return self._value
 
+    def maximum_power_of_unknown(self) -> int:
+        """Integer constants have no unknown variable, so power is 0."""
+        return 0
+
     def to_sympy_expr(self) -> sp.Expr:
         return sp.Integer(self._value)
 
@@ -139,6 +148,10 @@ class Unknown(Expression):
     def name(self) -> str:
         """The name of the unknown variable."""
         return "x"
+
+    def maximum_power_of_unknown(self) -> int:
+        """Unknown variable has power 1."""
+        return 1
 
     def to_sympy_expr(self) -> sp.Expr:
         return sp.Symbol(self.name)
@@ -238,6 +251,10 @@ class MathOperator(Expression):
 class Addition(MathOperator):
     """Addition operation."""
 
+    def maximum_power_of_unknown(self) -> int:
+        """For addition, return the maximum power among all operands."""
+        return max(op.maximum_power_of_unknown() for op in self._operands)
+
     def to_sympy_expr(self) -> sp.Expr:
         if not self._operands:
             return sp.Integer(0)
@@ -278,6 +295,10 @@ class Addition(MathOperator):
 class Multiplication(MathOperator):
     """Multiplication operation."""
 
+    def maximum_power_of_unknown(self) -> int:
+        """For multiplication, return the sum of powers of all operands."""
+        return sum(op.maximum_power_of_unknown() for op in self._operands)
+
     def to_sympy_expr(self) -> sp.Expr:
         result = self._operands[0].to_sympy_expr()
         for op in self._operands[1:]:
@@ -311,6 +332,10 @@ class ChangedSign(Expression):
     def operand(self) -> Expression:
         """The operand being negated."""
         return self._operand
+
+    def maximum_power_of_unknown(self) -> int:
+        """For negation, return the same power as the operand."""
+        return self._operand.maximum_power_of_unknown()
 
     def to_sympy_expr(self) -> sp.Expr:
         return -self._operand.to_sympy_expr()
@@ -372,6 +397,10 @@ class Inverted(Expression):
     def operand(self) -> Expression:
         """The operand being inverted."""
         return self._operand
+
+    def maximum_power_of_unknown(self) -> int:
+        """For division (1/operand), return negative of operand's power."""
+        return -self._operand.maximum_power_of_unknown()
 
     def to_sympy_expr(self) -> sp.Expr:
         return 1 / self._operand.to_sympy_expr()
@@ -450,6 +479,13 @@ class Equals(Expression):
             return cls(integer, unknown)
         else:
             return cls(unknown, integer)
+
+    def maximum_power_of_unknown(self) -> int:
+        """For equations, return the maximum power between left and right sides."""
+        return max(
+            self._left.maximum_power_of_unknown(),
+            self._right.maximum_power_of_unknown(),
+        )
 
     def to_sympy_expr(self) -> sp.Expr:
         # Return the equation as an expression (left - right = 0)

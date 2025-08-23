@@ -64,7 +64,7 @@ def generate_equation(cost_target: float, seed: Optional[int]) -> None:
     while current_complexity < cost_target:
         try:
             complication = equation_with_solution.random_complication(
-                cost_target, random_stream
+                cost_target, random_stream, maintain_linearity=True
             )
             equation_with_solution.apply_complication(complication)
 

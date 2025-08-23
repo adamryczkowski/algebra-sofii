@@ -13,13 +13,53 @@ from .expressions import (
 )
 
 
-def random_expression(random_stream, complexity_target: float) -> Expression:
+def random_expression(
+    random_stream, complexity_target: float, exclude_unknown: bool = False
+) -> Expression:
     """
     Generate a random expression in the form of:
     a) (a*x ± b) - linear expression with both coefficient and constant
     b) (a*x) - linear expression with only coefficient (b=0)
     c) (b) - constant expression (a=0)
+
+    Args:
+        random_stream: Random number generator
+        complexity_target: Target complexity for the expression
+        exclude_unknown: If True, generates expressions without the unknown variable x
     """
+    # If excluding unknown, generate only constant expressions
+    if exclude_unknown:
+        if complexity_target < 2.0:
+            # Simple constant (complexity = 1.0)
+            value = random_stream.randint(1, 9)
+            return Integer(value)
+        elif complexity_target < 4.0:
+            # Constant with some complexity - inversion or sign change
+            value = random_stream.randint(1, 9)
+            expr = Integer(value)
+
+            if complexity_target >= 3.0 and random_stream.random() < 0.5:
+                expr = Inverted(expr)
+            if random_stream.random() < 0.3:
+                expr = ChangedSign(expr)
+
+            return expr
+        else:
+            # More complex constant expression - addition of two constants
+            val1 = random_stream.randint(1, 9)
+            val2 = random_stream.randint(1, 9)
+
+            expr1 = Integer(val1)
+            expr2 = Integer(val2)
+
+            if complexity_target >= 5.0 and random_stream.random() < 0.3:
+                expr1 = Inverted(expr1)
+            if random_stream.random() < 0.5:
+                expr2 = ChangedSign(expr2)
+
+            return Addition([expr1, expr2])
+
+    # Original logic for expressions that can include unknown
     # Choose form based on complexity target more strictly
     if complexity_target < 2.0:
         # Simple constant (complexity = 1.0)
