@@ -23,17 +23,151 @@ Algebra Sofii creates random algebraic equations with a single unknown variable 
 
 [source,bash]
 ----
-git clone <repository-url>
+git clone git@github.com:adamryczkowski/algebra-sofii.git
 cd algebra-sofii
 poetry install
 ----
 
-=== Using pip
+=== Using pip with Git
 
 [source,bash]
 ----
-pip install algebra-sofii
+pip install git+https://github.com/adamryczkowski/algebra-sofii.git
 ----
+
+=== Development Installation
+
+[source,bash]
+----
+git clone git@github.com:adamryczkowski/algebra-sofii.git
+cd algebra-sofii
+poetry install --with dev
+----
+
+== Command-Line Interface
+
+After installation, Algebra Sofii provides a command-line tool for quickly generating algebra equations suitable for student practice.
+
+=== Basic Usage
+
+[source,bash]
+----
+# Generate an equation with default settings
+algebra-equation
+
+# Example output:
+# Generated Algebra Equation:
+# ========================================
+# Equation: 3·x + 7 = 22
+# Solution: x = 5
+# Complexity: 5.0
+# ✓ Solution verified
+----
+
+=== Command Options
+
+The `algebra-equation` command supports the following options:
+
+==== Cost Target (`-c`, `--cost-target`)
+
+Controls the complexity of the generated equation (default: 5.0):
+
+[source,bash]
+----
+# Simple equations (complexity 1-2)
+algebra-equation -c 2.0
+# Output: x = 7
+
+# Medium complexity (complexity 3-4)
+algebra-equation -c 4.0
+# Output: 2·x = 14
+
+# Higher complexity (complexity 5-7)
+algebra-equation -c 6.0
+# Output: 2·x + 5 = 17
+
+# Complex equations (complexity 8+)
+algebra-equation -c 10.0
+# Output: (3·x + 4) + 2 = 2·x + 11
+----
+
+==== Random Seed (`--seed`)
+
+For reproducible results, specify a seed value:
+
+[source,bash]
+----
+# Generate the same equation every time
+algebra-equation --seed 42
+
+# Use different seeds for variety
+algebra-equation --seed 123
+algebra-equation --seed 456
+----
+
+==== Help
+
+[source,bash]
+----
+algebra-equation --help
+----
+
+=== Complexity Levels
+
+The cost-target parameter controls equation difficulty:
+
+* **1-2**: Simple constants or basic linear terms
+  - Examples: `x = 5`, `3·x = 12`
+
+* **3-4**: Linear expressions with coefficients
+  - Examples: `2·x = 8`, `x + 3 = 7`
+
+* **5-7**: Full linear expressions with complications
+  - Examples: `2·x + 3 = 11`, `3·x - 4 = 8`
+
+* **8+**: Complex equations with multiple complications
+  - Examples: `(2·x + 1) + 3 = x + 9`, `2·(x + 3) = 3·x + 1`
+
+=== Examples
+
+[source,bash]
+----
+# Generate 5 practice problems of medium difficulty
+for i in {1..5}; do
+    echo "Problem $i:"
+    algebra-equation -c 5.0 --seed $RANDOM
+    echo
+done
+
+# Create reproducible homework set
+algebra-equation --seed 100 -c 3.0  # Problem 1
+algebra-equation --seed 101 -c 4.0  # Problem 2
+algebra-equation --seed 102 -c 5.0  # Problem 3
+algebra-equation --seed 103 -c 6.0  # Problem 4
+algebra-equation --seed 104 -c 7.0  # Problem 5
+
+# Generate a challenging problem
+algebra-equation -c 12.0 --seed 999
+----
+
+=== Educational Use
+
+The CLI tool is designed for educators and students:
+
+**For Teachers:**
+- Generate homework problems with consistent difficulty
+- Create reproducible problem sets using seeds
+- Scale complexity for different student levels
+
+**For Students:**
+- Practice with randomly generated problems
+- Self-verify solutions with built-in checking
+- Progress from simple to complex equations
+
+**For Parents:**
+- Generate practice problems at home
+- Adjust difficulty based on child's level
+- Solutions are provided for checking work
 
 == Quick Start
 
