@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List
 
-from .expressions import Equals, Expression, ExpressionIndex
+from .expressions import Addition, Equals, Expression, ExpressionIndex, Multiplication
 from .generators import random_expression
 
 
@@ -81,10 +81,19 @@ class ExpressionComplication(Complication):
     def complexity(self, expr: Expression) -> float:
         """Return complexity increase."""
         base_complexity = self._expr.complexity()
+
         if self._operation == OperationType.ADD_ZERO:
-            return base_complexity + 2.0  # Add and subtract operations
+            # Creates: Addition([expr, Addition([self, ChangedSign(expr)])])
+            # Complexity = 1 + expr.complexity() + (1 + self.complexity() + (1 + expr.complexity()))
+            # Increase = 1 + expr.complexity() + 1 + 1 + expr.complexity() - self.complexity()
+            # Simplifies to: 3 + 2 * expr.complexity()
+            return 3.0 + 2 * base_complexity
         elif self._operation == OperationType.MULTIPLY_BY_ONE:
-            return base_complexity + 3.0  # Multiply and divide operations
+            # Creates: Multiplication([expr, Multiplication([self, Inverted(expr)])])
+            # Complexity = 1 + expr.complexity() + (1 + self.complexity() + (2 + expr.complexity()))
+            # Increase = 1 + expr.complexity() + 1 + 2 + expr.complexity() - self.complexity()
+            # Simplifies to: 4 + 2 * expr.complexity()
+            return 4.0 + 2 * base_complexity
         return base_complexity
 
     def __repr__(self):
@@ -131,9 +140,51 @@ class EquationComplication(Complication):
         """Return complexity increase."""
         base_complexity = self._expr.complexity()
         if self._operation == OperationType.ADD:
-            return base_complexity * 2  # Added to both sides
+            # When adding to both sides, the complexity increase depends on whether
+            # the sides are already Addition expressions or not
+            # - If side is Addition: just adds expr.complexity() (appends to operands)
+            # - If side is not Addition: creates Addition([side, expr]) = 1.0 + expr.complexity()
+
+            left_is_addition = (
+                isinstance(expr.left, Addition) if isinstance(expr, Equals) else False
+            )
+            right_is_addition = (
+                isinstance(expr.right, Addition) if isinstance(expr, Equals) else False
+            )
+
+            left_increase = (
+                base_complexity if left_is_addition else (1.0 + base_complexity)
+            )
+            right_increase = (
+                base_complexity if right_is_addition else (1.0 + base_complexity)
+            )
+
+            return left_increase + right_increase
         elif self._operation == OperationType.MULTIPLY:
-            return base_complexity * 2 + 1  # Multiplied on both sides
+            # When multiplying both sides, the complexity increase depends on whether
+            # the sides are already Multiplication expressions or not
+            # - If side is Multiplication: just adds expr.complexity() (appends to operands)
+            # - If side is not Multiplication: creates Multiplication([side, expr]) = 1.0 + expr.complexity()
+
+            left_is_multiplication = (
+                isinstance(expr.left, Multiplication)
+                if isinstance(expr, Equals)
+                else False
+            )
+            right_is_multiplication = (
+                isinstance(expr.right, Multiplication)
+                if isinstance(expr, Equals)
+                else False
+            )
+
+            left_increase = (
+                base_complexity if left_is_multiplication else (1.0 + base_complexity)
+            )
+            right_increase = (
+                base_complexity if right_is_multiplication else (1.0 + base_complexity)
+            )
+
+            return left_increase + right_increase
         return base_complexity
 
     def __repr__(self):

@@ -88,22 +88,6 @@ def add_simple_complications(
     return current_equation
 
 
-def format_traditional(expression) -> str:
-    """Format expression in traditional mathematical notation."""
-    # Handle Equals expressions specially to show both sides
-    if hasattr(expression, "left") and hasattr(expression, "right"):
-        # This is an Equals expression, format both sides
-        left_sympy = expression.left.to_sympy_expr()
-        right_sympy = expression.right.to_sympy_expr()
-        left_str = str(left_sympy).replace("**", "^").replace("*", "·")
-        right_str = str(right_sympy).replace("**", "^").replace("*", "·")
-        return f"{left_str} = {right_str}"
-    else:
-        # Regular expression
-        sympy_expr = expression.to_sympy_expr()
-        return str(sympy_expr).replace("**", "^").replace("*", "·")
-
-
 @click.command()
 @click.option(
     "-c",
@@ -141,7 +125,7 @@ def generate_equation(cost_target: float, seed: Optional[int]) -> None:
     # Format output
     click.echo("Generated Algebra Equation:")
     click.echo("=" * 40)
-    click.echo(f"Equation: {format_traditional(equation)}")
+    click.echo(f"Equation: {str(equation)}")
     click.echo(f"Solution: x = {solution}")
     click.echo(f"Complexity: {current_complexity:.1f}")
 
