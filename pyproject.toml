@@ -1,0 +1,45 @@
+[project]
+name = "algebra-sofii"
+version = "0.1.0"
+description = "Equation generator to train 12-year-old students in algebra."
+authors = [
+    {name = "Adam Ryczkowski",email = "adam@statystyka.net"}
+]
+readme = "README.adoc"
+requires-python = ">=3.12"
+dependencies = [
+    "sympy>=1.14.0,<2.0.0",
+    "pytest>=8.4.1,<9.0.0"
+]
+
+
+[tool.poetry]
+name = "algebra-sofii"
+version = "0.1.0"
+description = "Equation generator to train 12-year-old students in algebra."
+authors = ["Adam Ryczkowski <adam@statystyka.net>"]
+readme = "README.adoc"
+packages = [{include = "algebra_sofii"}]
+
+
+[tool.poetry.dependencies]
+python = "^3.12"
+sympy = "^1.14.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+pre-commit = "^4.3.0"
+rust-just = "^1.42.4"
+pyright = "^1.1.404"
+black = "^24.0.0"
+coverage = "^7.10.4"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
