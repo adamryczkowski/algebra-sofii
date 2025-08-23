@@ -32,11 +32,9 @@ def test_exclude_unknown_flag():
     for complexity in [1.0, 2.0, 3.0, 4.0, 5.0]:
         for _ in range(10):
             expr = random_expression(random_stream, complexity, exclude_unknown=True)
-            if contains_unknown(expr):
-                print(
-                    f"ERROR: Expression {expr} with complexity {complexity} contains unknown!"
-                )
-                return False
+            assert not contains_unknown(expr), (
+                f"Expression {expr} with complexity {complexity} contains unknown!"
+            )
             print(f"✓ Complexity {complexity}: {expr} (no unknown)")
 
     print("\nTesting exclude_unknown=False (default)...")
@@ -52,8 +50,6 @@ def test_exclude_unknown_flag():
     if not unknown_found:
         print("WARNING: No expressions with unknown found in default mode")
 
-    return True
-
 
 def test_multiply_by_one_linearity():
     """Test that MULTIPLY_BY_ONE complications maintain linearity."""
@@ -66,49 +62,37 @@ def test_multiply_by_one_linearity():
 
         # Generate several complications and check linearity
         for _ in range(10):
-            try:
-                complication = eq_with_sol.random_complication(10.0, random_stream)
-                eq_with_sol.apply_complication(complication)
+            complication = eq_with_sol.random_complication(10.0, random_stream)
+            eq_with_sol.apply_complication(complication)
 
-                # Check if solution is still valid
-                if not eq_with_sol.verify_solution():
-                    print(
-                        f"ERROR: Solution {solution} no longer valid after complication"
-                    )
-                    return False
+            # Check if solution is still valid
+            assert eq_with_sol.verify_solution(), (
+                f"Solution {solution} no longer valid after complication"
+            )
 
-                # For MULTIPLY_BY_ONE complications, check that the expression doesn't contain unknown
-                if (
-                    isinstance(complication, ExpressionComplication)
-                    and complication.operation == OperationType.MULTIPLY_BY_ONE
-                ):
-                    if contains_unknown(complication.expr):
-                        print(
-                            f"ERROR: MULTIPLY_BY_ONE used expression with unknown: {complication.expr}"
-                        )
-                        return False
-                    else:
-                        print(
-                            f"✓ MULTIPLY_BY_ONE with safe expression: {complication.expr}"
-                        )
-
-            except Exception as e:
-                print(f"ERROR during complication: {e}")
-                return False
-
-    return True
+            # For MULTIPLY_BY_ONE complications, check that the expression doesn't contain unknown
+            if (
+                isinstance(complication, ExpressionComplication)
+                and complication.operation == OperationType.MULTIPLY_BY_ONE
+            ):
+                assert not contains_unknown(complication.expr), (
+                    f"MULTIPLY_BY_ONE used expression with unknown: {complication.expr}"
+                )
+                print(f"✓ MULTIPLY_BY_ONE with safe expression: {complication.expr}")
 
 
 if __name__ == "__main__":
     print("Testing exclude_unknown functionality...\n")
 
-    success = True
-    success &= test_exclude_unknown_flag()
-    success &= test_multiply_by_one_linearity()
-
-    if success:
+    try:
+        test_exclude_unknown_flag()
+        test_multiply_by_one_linearity()
         print("\n✅ All tests passed! The exclude_unknown flag works correctly.")
-    else:
-        print("\n❌ Some tests failed!")
+    except AssertionError as e:
+        print(f"\n❌ Test failed: {e}")
+        exit(1)
+    except Exception as e:
+        print(f"\n❌ Unexpected error: {e}")
+        exit(1)
 
-    exit(0 if success else 1)
+    exit(0)
