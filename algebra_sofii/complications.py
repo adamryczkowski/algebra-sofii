@@ -19,6 +19,7 @@ class OperationType(Enum):
     ADD = "add"
     MULTIPLY = "multiply"
     INSERT_BRACKETS = "insert_brackets"
+    NEGATE = "negate"
 
 
 class Complication(ABC):

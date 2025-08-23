@@ -41,6 +41,10 @@ class Expression(ABC):
         """Convert to sympy expression."""
         pass
 
+    def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
+        """Default implementation that delegates to to_sympy_expr."""
+        return self.to_sympy_expr()
+
     def evaluate(self, true_x: int) -> sp.Expr:
         """Evaluate the expression using sympy."""
         x = sp.Symbol("x")
@@ -61,6 +65,10 @@ class Expression(ABC):
     def complexity(self) -> float:
         """Return the complexity measure of the expression."""
         pass
+
+    def _complexity_depth_limited(self, max_depth: int) -> float:
+        """Default implementation that delegates to complexity."""
+        return self.complexity()
 
     @abstractmethod
     def replace_with(self, index: ExpressionIndex, expr: "Expression") -> "Expression":
@@ -112,6 +120,13 @@ class Integer(Expression):
     def to_sympy_expr(self) -> sp.Expr:
         return sp.Integer(self._value)
 
+    def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
+        if max_depth <= 0:
+            # Return a simple placeholder if we hit depth limit
+            return sp.Integer(0)
+
+        return super()._to_sympy_expr_depth_limited(max_depth)
+
     def random_subexpression(self, random_stream) -> ExpressionIndex:
         return ExpressionIndex([])
 
@@ -122,6 +137,12 @@ class Integer(Expression):
 
     def complexity(self) -> float:
         return 1.0
+
+    def _complexity_depth_limited(self, max_depth: int) -> float:
+        if max_depth <= 0:
+            return 1.0  # Return base complexity if we've hit the depth limit
+
+        return super()._complexity_depth_limited(max_depth)
 
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
@@ -156,6 +177,13 @@ class Unknown(Expression):
     def to_sympy_expr(self) -> sp.Expr:
         return sp.Symbol(self.name)
 
+    def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
+        if max_depth <= 0:
+            # Return a simple placeholder if we hit depth limit
+            return sp.Integer(0)
+
+        return super()._to_sympy_expr_depth_limited(max_depth)
+
     def random_subexpression(self, random_stream) -> ExpressionIndex:
         return ExpressionIndex([])
 
@@ -166,6 +194,12 @@ class Unknown(Expression):
 
     def complexity(self) -> float:
         return 1.0
+
+    def _complexity_depth_limited(self, max_depth: int) -> float:
+        if max_depth <= 0:
+            return 1.0  # Return base complexity if we've hit the depth limit
+
+        return super()._complexity_depth_limited(max_depth)
 
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
@@ -214,7 +248,19 @@ class MathOperator(Expression):
         return self._operands[operand_idx][remaining_index]
 
     def complexity(self) -> float:
-        return 1.0 + sum(op.complexity() for op in self._operands)
+        # Use depth-limited complexity calculation to prevent infinite recursion
+        return self._complexity_depth_limited(max_depth=50)
+
+    def _complexity_depth_limited(self, max_depth: int) -> float:
+        if max_depth <= 0:
+            return 1.0  # Return base complexity if we've hit the depth limit
+
+        return 1.0 + sum(
+            op._complexity_depth_limited(max_depth - 1)
+            if hasattr(op, "_complexity_depth_limited")
+            else op.complexity()
+            for op in self._operands
+        )
 
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
@@ -256,11 +302,28 @@ class Addition(MathOperator):
         return max(op.maximum_power_of_unknown() for op in self._operands)
 
     def to_sympy_expr(self) -> sp.Expr:
+        # Add recursion protection to prevent infinite loops
+        return self._to_sympy_expr_depth_limited(max_depth=50)
+
+    def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
+        if max_depth <= 0:
+            # Return a simple placeholder if we hit depth limit
+            return sp.Integer(0)
+
         if not self._operands:
             return sp.Integer(0)
-        result = self._operands[0].to_sympy_expr()
+        result = (
+            self._operands[0]._to_sympy_expr_depth_limited(max_depth - 1)
+            if hasattr(self._operands[0], "_to_sympy_expr_depth_limited")
+            else self._operands[0].to_sympy_expr()
+        )
         for op in self._operands[1:]:
-            result = result + op.to_sympy_expr()
+            op_expr = (
+                op._to_sympy_expr_depth_limited(max_depth - 1)
+                if hasattr(op, "_to_sympy_expr_depth_limited")
+                else op.to_sympy_expr()
+            )
+            result = result + op_expr
         return result
 
     def add_expression(self, expr: Expression) -> "Addition":
@@ -300,9 +363,26 @@ class Multiplication(MathOperator):
         return sum(op.maximum_power_of_unknown() for op in self._operands)
 
     def to_sympy_expr(self) -> sp.Expr:
-        result = self._operands[0].to_sympy_expr()
+        # Add recursion protection to prevent infinite loops
+        return self._to_sympy_expr_depth_limited(max_depth=50)
+
+    def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
+        if max_depth <= 0:
+            # Return a simple placeholder if we hit depth limit
+            return sp.Integer(1)
+
+        result = (
+            self._operands[0]._to_sympy_expr_depth_limited(max_depth - 1)
+            if hasattr(self._operands[0], "_to_sympy_expr_depth_limited")
+            else self._operands[0].to_sympy_expr()
+        )
         for op in self._operands[1:]:
-            result *= op.to_sympy_expr()
+            op_expr = (
+                op._to_sympy_expr_depth_limited(max_depth - 1)
+                if hasattr(op, "_to_sympy_expr_depth_limited")
+                else op.to_sympy_expr()
+            )
+            result *= op_expr
         return result
 
     def multiply_by(self, expr: Expression) -> "Multiplication":
@@ -338,7 +418,20 @@ class ChangedSign(Expression):
         return self._operand.maximum_power_of_unknown()
 
     def to_sympy_expr(self) -> sp.Expr:
-        return -self._operand.to_sympy_expr()
+        # Add recursion protection to prevent infinite loops
+        return self._to_sympy_expr_depth_limited(max_depth=50)
+
+    def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
+        if max_depth <= 0:
+            # Return a simple placeholder if we hit depth limit
+            return sp.Integer(0)
+
+        operand_expr = (
+            self._operand._to_sympy_expr_depth_limited(max_depth - 1)
+            if hasattr(self._operand, "_to_sympy_expr_depth_limited")
+            else self._operand.to_sympy_expr()
+        )
+        return -operand_expr
 
     def random_subexpression(self, random_stream) -> ExpressionIndex:
         choices = [ExpressionIndex([]), ExpressionIndex([0])]
@@ -357,7 +450,18 @@ class ChangedSign(Expression):
         raise IndexError("ChangedSign has only one operand at index 0")
 
     def complexity(self) -> float:
-        return 1.0 + self._operand.complexity()
+        # Use depth-limited complexity calculation to prevent infinite recursion
+        return self._complexity_depth_limited(max_depth=50)
+
+    def _complexity_depth_limited(self, max_depth: int) -> float:
+        if max_depth <= 0:
+            return 1.0  # Return base complexity if we've hit the depth limit
+
+        return 1.0 + (
+            self._operand._complexity_depth_limited(max_depth - 1)
+            if hasattr(self._operand, "_complexity_depth_limited")
+            else self._operand.complexity()
+        )
 
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
@@ -403,7 +507,20 @@ class Inverted(Expression):
         return -self._operand.maximum_power_of_unknown()
 
     def to_sympy_expr(self) -> sp.Expr:
-        return 1 / self._operand.to_sympy_expr()
+        # Add recursion protection to prevent infinite loops
+        return self._to_sympy_expr_depth_limited(max_depth=50)
+
+    def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
+        if max_depth <= 0:
+            # Return a simple placeholder if we hit depth limit
+            return sp.Integer(1)
+
+        operand_expr = (
+            self._operand._to_sympy_expr_depth_limited(max_depth - 1)
+            if hasattr(self._operand, "_to_sympy_expr_depth_limited")
+            else self._operand.to_sympy_expr()
+        )
+        return 1 / operand_expr
 
     def random_subexpression(self, random_stream) -> ExpressionIndex:
         choices = [ExpressionIndex([]), ExpressionIndex([0])]
@@ -422,7 +539,18 @@ class Inverted(Expression):
         raise IndexError("Inverted has only one operand at index 0")
 
     def complexity(self) -> float:
-        return 2.0 + self._operand.complexity()
+        # Use depth-limited complexity calculation to prevent infinite recursion
+        return self._complexity_depth_limited(max_depth=50)
+
+    def _complexity_depth_limited(self, max_depth: int) -> float:
+        if max_depth <= 0:
+            return 2.0  # Return base complexity if we've hit the depth limit
+
+        return 2.0 + (
+            self._operand._complexity_depth_limited(max_depth - 1)
+            if hasattr(self._operand, "_complexity_depth_limited")
+            else self._operand.complexity()
+        )
 
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:

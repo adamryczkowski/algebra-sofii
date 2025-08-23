@@ -45,11 +45,37 @@ def generate_equation_with_complexity(
 
     else:
         # High complexity: multiple complications
-        # Start with a medium equation
-        base_equation = generate_equation_with_complexity(random_stream, solution, 4.0)
+        # Start with a simple base equation to avoid recursion
+        coeff = random_stream.randint(1, 3)
+        constant = random_stream.randint(-3, 3)
 
-        # Add multiple complications to reach target complexity
-        num_complications = min(int((target_complexity - 4.0) / 2.0) + 1, 4)
+        left_side = Addition(
+            [Multiplication([Integer(coeff), Unknown()]), Integer(constant)]
+        )
+        right_value = coeff * solution + constant
+        right_side = Integer(right_value)
+
+        base_equation = Equals(left_side, right_side)
+
+        # Calculate how many complications we need
+        current_complexity = base_equation.complexity()
+        remaining_complexity = target_complexity - current_complexity
+
+        # Be more aggressive with complications for high targets
+        estimated_complexity_per_complication = 4.0
+        num_complications = max(
+            1, int(remaining_complexity / estimated_complexity_per_complication)
+        )
+
+        # For very high complexity targets, add even more complications
+        if target_complexity > 100:
+            num_complications = max(num_complications, int(target_complexity / 15))
+        if target_complexity > 1000:
+            num_complications = max(num_complications, int(target_complexity / 10))
+
+        # Hard cap to prevent infinite recursion
+        num_complications = min(num_complications, 100)
+
         equation = add_simple_complications(
             random_stream, base_equation, num_complications
         )
@@ -64,10 +90,15 @@ def add_simple_complications(
     current_equation = equation
 
     for _ in range(num_complications):
-        # Choose a random complication type
-        complication_type = random_stream.choice(
-            [OperationType.ADD_ZERO, OperationType.MULTIPLY_BY_ONE]
-        )
+        # Choose a random complication type with proper weights
+        # Give NEGATE a higher probability to reach the expected 30-70% range
+        complication_types = [
+            OperationType.ADD_ZERO,
+            OperationType.MULTIPLY_BY_ONE,
+            OperationType.NEGATE,
+            OperationType.NEGATE,  # Include twice to increase probability
+        ]
+        complication_type = random_stream.choice(complication_types)
 
         # Generate a small random expression for the complication
         # For MULTIPLY_BY_ONE, exclude unknown to prevent creating quadratic equations
@@ -80,9 +111,15 @@ def add_simple_complications(
             if complication_type == OperationType.ADD_ZERO:
                 # Add the same expression to both sides
                 current_equation = current_equation.add_to_sides(complication_expr)
-            else:  # MULTIPLY_BY_ONE
+            elif complication_type == OperationType.MULTIPLY_BY_ONE:
                 # Multiply both sides by the expression
                 current_equation = current_equation.multiply_sides_by(complication_expr)
+            elif complication_type == OperationType.NEGATE:
+                # Apply negation to BOTH sides to maintain equation balance
+                # This preserves the solution while adding complexity
+                new_left = current_equation.left.negated()
+                new_right = current_equation.right.negated()
+                current_equation = Equals(new_left, new_right)
         except Exception:
             # If complication fails, skip it
             continue
