@@ -3,7 +3,7 @@ Unit tests for the __repr__ methods of expression classes.
 Tests mathematical notation output against expected strings.
 """
 
-import unittest
+import pytest
 from algebra_sofii.expressions import (
     Addition,
     ChangedSign,
@@ -14,280 +14,191 @@ from algebra_sofii.expressions import (
     Unknown,
 )
 
+# Common test variables
+x = Unknown()
+zero = Integer(0)
+one = Integer(1)
+two = Integer(2)
+three = Integer(3)
+five = Integer(5)
+neg_two = Integer(-2)
 
-class TestMathematicalRepr(unittest.TestCase):
-    """Test that __repr__ methods display proper mathematical notation."""
 
-    def setUp(self):
-        """Set up common expressions for testing."""
-        self.x = Unknown()
-        self.zero = Integer(0)
-        self.one = Integer(1)
-        self.two = Integer(2)
-        self.three = Integer(3)
-        self.five = Integer(5)
-        self.neg_two = Integer(-2)
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (x, "x"),
+        (zero, "0"),
+        (one, "1"),
+        (five, "5"),
+        (neg_two, "-2"),
+    ],
+)
+def test_basic_expressions(expr, expected):
+    assert str(expr) == expected
 
-    def test_basic_expressions(self):
-        """Test basic expression representations."""
-        # Test cases: (expression, expected_string)
-        test_cases = [
-            (self.x, "x"),
-            (self.zero, "0"),
-            (self.one, "1"),
-            (self.five, "5"),
-            (self.neg_two, "-2"),
-        ]
 
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (Addition([x, five]), "x + 5"),
+        (Addition([two, three]), "2 + 3"),
+        (Addition([x, two, three]), "x + 2 + 3"),
+        (Multiplication([x, five]), "x * 5"),
+        (Multiplication([two, three]), "2 * 3"),
+        (Multiplication([x, two, three]), "x * 2 * 3"),
+        (ChangedSign(x), "-x"),
+        (ChangedSign(five), "-5"),
+        (Inverted(x), "1/x"),
+        (Inverted(five), "1/5"),
+        (Equals(x, five), "x = 5"),
+    ],
+)
+def test_simple_operations(expr, expected):
+    assert str(expr) == expected
 
-    def test_simple_operations(self):
-        """Test simple operations without nested complexity."""
-        test_cases = [
-            # Addition
-            (Addition([self.x, self.five]), "x + 5"),
-            (Addition([self.two, self.three]), "2 + 3"),
-            (Addition([self.x, self.two, self.three]), "x + 2 + 3"),
-            # Multiplication
-            (Multiplication([self.x, self.five]), "x * 5"),
-            (Multiplication([self.two, self.three]), "2 * 3"),
-            (Multiplication([self.x, self.two, self.three]), "x * 2 * 3"),
-            # Negation
-            (ChangedSign(self.x), "-x"),
-            (ChangedSign(self.five), "-5"),
-            # Inversion
-            (Inverted(self.x), "1/x"),
-            (Inverted(self.five), "1/5"),
-            # Equation
-            (Equals(self.x, self.five), "x = 5"),
-        ]
 
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (Addition([five, ChangedSign(x)]), "5 - x"),
+        (Addition([x, ChangedSign(two)]), "x - 2"),
+        (Addition([five, ChangedSign(two)]), "5 - 2"),
+        (Addition([x, five, ChangedSign(two)]), "x + 5 - 2"),
+        (Addition([x, ChangedSign(two), three]), "x - 2 + 3"),
+    ],
+)
+def test_subtraction_handling(expr, expected):
+    assert str(expr) == expected
 
-    def test_subtraction_handling(self):
-        """Test that addition with negated operands displays as subtraction."""
-        test_cases = [
-            # Simple subtraction
-            (Addition([self.five, ChangedSign(self.x)]), "5 - x"),
-            (Addition([self.x, ChangedSign(self.two)]), "x - 2"),
-            (Addition([self.five, ChangedSign(self.two)]), "5 - 2"),
-            # Multiple terms with subtraction
-            (Addition([self.x, self.five, ChangedSign(self.two)]), "x + 5 - 2"),
-            (Addition([self.x, ChangedSign(self.two), self.three]), "x - 2 + 3"),
-        ]
 
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
+add_expr = Addition([x, two])
 
-    def test_parentheses_in_multiplication(self):
-        """Test that parentheses are correctly added in multiplication."""
-        # Addition needs parentheses when multiplied
-        add_expr = Addition([self.x, self.two])
 
-        test_cases = [
-            (Multiplication([add_expr, self.three]), "(x + 2) * 3"),
-            (Multiplication([self.three, add_expr]), "3 * (x + 2)"),
-            (Multiplication([add_expr, add_expr]), "(x + 2) * (x + 2)"),
-            # Multiple additions in multiplication
-            (
-                Multiplication([add_expr, Addition([self.x, self.five])]),
-                "(x + 2) * (x + 5)",
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (Multiplication([add_expr, three]), "(x + 2) * 3"),
+        (Multiplication([three, add_expr]), "3 * (x + 2)"),
+        (Multiplication([add_expr, add_expr]), "(x + 2) * (x + 2)"),
+        (Multiplication([add_expr, Addition([x, five])]), "(x + 2) * (x + 5)"),
+        (Multiplication([x, three]), "x * 3"),
+        (Multiplication([ChangedSign(x), three]), "-x * 3"),
+        (Multiplication([Inverted(x), three]), "1/x * 3"),
+    ],
+)
+def test_parentheses_in_multiplication(expr, expected):
+    assert str(expr) == expected
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (ChangedSign(Addition([x, two])), "-(x + 2)"),
+        (ChangedSign(Multiplication([x, two])), "-(x * 2)"),
+        (ChangedSign(x), "-x"),
+        (ChangedSign(Inverted(x)), "-1/x"),
+    ],
+)
+def test_parentheses_in_negation(expr, expected):
+    assert str(expr) == expected
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (Inverted(Addition([x, two])), "1/(x + 2)"),
+        (Inverted(Multiplication([x, two])), "1/(x * 2)"),
+        (Inverted(ChangedSign(x)), "1/(-x)"),
+        (Inverted(x), "1/x"),
+        (Inverted(five), "1/5"),
+    ],
+)
+def test_parentheses_in_inversion(expr, expected):
+    assert str(expr) == expected
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (Addition([Multiplication([two, x]), three]), "2 * x + 3"),
+        (Addition([x, ChangedSign(Multiplication([two, three]))]), "x - 2 * 3"),
+        (Multiplication([Addition([x, one]), ChangedSign(two)]), "(x + 1) * -2"),
+        (Inverted(Addition([Multiplication([two, x]), one])), "1/(2 * x + 1)"),
+        (ChangedSign(Inverted(Addition([x, one]))), "-1/(x + 1)"),
+        (
+            Multiplication([Addition([x, one]), Inverted(Addition([x, two]))]),
+            "(x + 1) * 1/(x + 2)",
+        ),
+    ],
+)
+def test_complex_nested_expressions(expr, expected):
+    assert str(expr) == expected
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (
+            Addition([Multiplication([Addition([x, one]), two]), three]),
+            "(x + 1) * 2 + 3",
+        ),
+        (
+            ChangedSign(Multiplication([Addition([x, one]), Addition([x, two])])),
+            "-((x + 1) * (x + 2))",
+        ),
+        (Inverted(Multiplication([Addition([x, one]), two])), "1/((x + 1) * 2)"),
+        (
+            Addition(
+                [
+                    Multiplication([three, x]),
+                    ChangedSign(two),
+                    Inverted(Addition([x, one])),
+                ]
             ),
-            # No parentheses needed for simple terms
-            (Multiplication([self.x, self.three]), "x * 3"),
-            (Multiplication([ChangedSign(self.x), self.three]), "-x * 3"),
-            (Multiplication([Inverted(self.x), self.three]), "1/x * 3"),
-        ]
+            "3 * x - 2 + 1/(x + 1)",
+        ),
+        (Multiplication([two, ChangedSign(Addition([x, three]))]), "2 * -(x + 3)"),
+    ],
+)
+def test_deeply_nested_expressions(expr, expected):
+    assert str(expr) == expected
 
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
 
-    def test_parentheses_in_negation(self):
-        """Test that parentheses are correctly added in negation."""
-        test_cases = [
-            # Complex expressions need parentheses when negated
-            (ChangedSign(Addition([self.x, self.two])), "-(x + 2)"),
-            (ChangedSign(Multiplication([self.x, self.two])), "-(x * 2)"),
-            # Simple expressions don't need extra parentheses
-            (ChangedSign(self.x), "-x"),
-            (ChangedSign(Inverted(self.x)), "-1/x"),
-        ]
-
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
-
-    def test_parentheses_in_inversion(self):
-        """Test that parentheses are correctly added in inversion."""
-        test_cases = [
-            # Complex expressions need parentheses in denominator
-            (Inverted(Addition([self.x, self.two])), "1/(x + 2)"),
-            (Inverted(Multiplication([self.x, self.two])), "1/(x * 2)"),
-            (Inverted(ChangedSign(self.x)), "1/(-x)"),
-            # Simple expressions don't need extra parentheses
-            (Inverted(self.x), "1/x"),
-            (Inverted(self.five), "1/5"),
-        ]
-
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
-
-    def test_complex_nested_expressions(self):
-        """Test complex nested expressions with multiple levels."""
-        test_cases = [
-            # Nested addition and multiplication
-            (Addition([Multiplication([self.two, self.x]), self.three]), "2 * x + 3"),
-            # Addition with negated multiplication
-            (
-                Addition([self.x, ChangedSign(Multiplication([self.two, self.three]))]),
-                "x - 2 * 3",
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (Equals(x, five), "x = 5"),
+        (Equals(five, x), "5 = x"),
+        (Equals(Addition([x, two]), five), "x + 2 = 5"),
+        (Equals(Multiplication([two, x]), Integer(10)), "2 * x = 10"),
+        (Equals(Addition([x, two]), Addition([three, x])), "x + 2 = 3 + x"),
+        (
+            Equals(
+                Addition([Multiplication([two, x]), three]), Addition([Integer(7), x])
             ),
-            # Multiplication of addition and negation
-            (
-                Multiplication([Addition([self.x, self.one]), ChangedSign(self.two)]),
-                "(x + 1) * -2",
-            ),
-            # Complex fraction
-            (
-                Inverted(Addition([Multiplication([self.two, self.x]), self.one])),
-                "1/(2 * x + 1)",
-            ),
-            # Negated fraction
-            (ChangedSign(Inverted(Addition([self.x, self.one]))), "-1/(x + 1)"),
-            # Fraction with complex numerator (hypothetical Division class behavior)
-            # Using multiplication with inverted denominator
-            (
-                Multiplication(
-                    [
-                        Addition([self.x, self.one]),
-                        Inverted(Addition([self.x, self.two])),
-                    ]
-                ),
-                "(x + 1) * 1/(x + 2)",
-            ),
-        ]
-
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
-
-    def test_deeply_nested_expressions(self):
-        """Test deeply nested expressions with multiple operation types."""
-        test_cases = [
-            # Triple nesting: ((x + 1) * 2) + 3
-            (
-                Addition(
-                    [
-                        Multiplication([Addition([self.x, self.one]), self.two]),
-                        self.three,
-                    ]
-                ),
-                "(x + 1) * 2 + 3",
-            ),
-            # Negation of complex multiplication: -((x + 1) * (x + 2))
-            (
-                ChangedSign(
-                    Multiplication(
-                        [Addition([self.x, self.one]), Addition([self.x, self.two])]
-                    )
-                ),
-                "-((x + 1) * (x + 2))",
-            ),
-            # Inversion of nested operations: 1/((x + 1) * 2)
-            (
-                Inverted(Multiplication([Addition([self.x, self.one]), self.two])),
-                "1/((x + 1) * 2)",
-            ),
-            # Complex addition with multiple operation types
-            (
-                Addition(
-                    [
-                        Multiplication([self.three, self.x]),
-                        ChangedSign(self.two),
-                        Inverted(Addition([self.x, self.one])),
-                    ]
-                ),
-                "3 * x - 2 + 1/(x + 1)",
-            ),
-            # Multiplication with negated addition
-            (
-                Multiplication([self.two, ChangedSign(Addition([self.x, self.three]))]),
-                "2 * -(x + 3)",
-            ),
-        ]
-
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
-
-    def test_equation_representations(self):
-        """Test various equation formats."""
-        test_cases = [
-            # Simple equations
-            (Equals(self.x, self.five), "x = 5"),
-            (Equals(self.five, self.x), "5 = x"),
-            # Equations with operations on left side
-            (Equals(Addition([self.x, self.two]), self.five), "x + 2 = 5"),
-            (Equals(Multiplication([self.two, self.x]), Integer(10)), "2 * x = 10"),
-            # Equations with operations on both sides
-            (
-                Equals(Addition([self.x, self.two]), Addition([self.three, self.x])),
-                "x + 2 = 3 + x",
-            ),
-            # Complex equations
-            (
-                Equals(
-                    Addition([Multiplication([self.two, self.x]), self.three]),
-                    Addition([Integer(7), self.x]),
-                ),
-                "2 * x + 3 = 7 + x",
-            ),
-            # Equation with fractions
-            (Equals(Inverted(self.x), Inverted(self.five)), "1/x = 1/5"),
-        ]
-
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
-
-    def test_edge_cases_and_special_scenarios(self):
-        """Test edge cases and special formatting scenarios."""
-        test_cases = [
-            # Multiple negations
-            (ChangedSign(ChangedSign(self.x)), "--x"),  # Should show double negation
-            # Multiple inversions
-            (Inverted(Inverted(self.x)), "1/(1/x)"),
-            # Addition with zero
-            (Addition([self.x, self.zero]), "x + 0"),
-            # Multiplication with one
-            (Multiplication([self.x, self.one]), "x * 1"),
-            # Complex subtraction chain
-            (
-                Addition(
-                    [self.x, ChangedSign(self.two), ChangedSign(self.three), self.five]
-                ),
-                "x - 2 - 3 + 5",
-            ),
-            # Nested parentheses preservation
-            (
-                Multiplication(
-                    [Addition([self.x, Addition([self.two, self.three])]), self.five]
-                ),
-                "(x + (2 + 3)) * 5",
-            ),
-        ]
-
-        for expr, expected in test_cases:
-            with self.subTest(expr=expr):
-                self.assertEqual(str(expr), expected)
+            "2 * x + 3 = 7 + x",
+        ),
+        (Equals(Inverted(x), Inverted(five)), "1/x = 1/5"),
+    ],
+)
+def test_equation_representations(expr, expected):
+    assert str(expr) == expected
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (ChangedSign(ChangedSign(x)), "--x"),
+        (Inverted(Inverted(x)), "1/(1/x)"),
+        (Addition([x, zero]), "x + 0"),
+        (Multiplication([x, one]), "x * 1"),
+        (Addition([x, ChangedSign(two), ChangedSign(three), five]), "x - 2 - 3 + 5"),
+        (
+            Multiplication([Addition([x, Addition([two, three])]), five]),
+            "(x + (2 + 3)) * 5",
+        ),
+    ],
+)
+def test_edge_cases_and_special_scenarios(expr, expected):
+    assert str(expr) == expected

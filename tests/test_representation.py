@@ -181,6 +181,9 @@ class TestEdgeCases:
         # Test that double negation can be represented
         assert str(double_neg) == "--x"
 
+        double_neg = neg_x.negated()
+        assert str(double_neg) == "x"
+
     def test_inversion_of_inversion(self):
         """Test double inversion"""
         x = Unknown()
@@ -188,6 +191,8 @@ class TestEdgeCases:
         double_inv = Inverted(inv_x)
 
         assert str(double_inv) == "1/(1/x)"
+        double_inv = inv_x.inverted()
+        assert str(double_inv) == "x"
 
     def test_zero_and_one_representation(self):
         """Test representation of zero and one"""

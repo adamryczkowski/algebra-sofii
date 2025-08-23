@@ -7,7 +7,85 @@ from typing import Optional
 
 import click
 
-from .complications import EquationWithSolution
+from .complications import OperationType
+from .expressions import Equals, Integer, Unknown, Addition, Multiplication
+from .generators import random_nonzero_expression
+
+
+def generate_equation_with_complexity(
+    random_stream: random.Random, solution: int, target_complexity: float
+) -> Equals:
+    """Generate an equation with approximately the target complexity."""
+
+    if target_complexity < 2.5:
+        # Simple equation: x = solution
+        return Equals.from_solution(solution, swap=random_stream.choice([True, False]))
+
+    elif target_complexity < 5.0:
+        # Medium complexity: linear expression = solution
+        # Generate a simple linear expression
+        coeff = random_stream.randint(1, 5)
+        constant = random_stream.randint(-5, 5)
+
+        # Create ax + b = solution, so x should equal (solution - b) / a
+        # But we want x = solution, so we create ax + b = a*solution + b
+        left_side = Addition(
+            [Multiplication([Integer(coeff), Unknown()]), Integer(constant)]
+        )
+        right_value = coeff * solution + constant
+        right_side = Integer(right_value)
+
+        equation = Equals(left_side, right_side)
+
+        # Add some complications if complexity target is higher
+        if target_complexity > 3.5:
+            equation = add_simple_complications(random_stream, equation, 1)
+
+        return equation
+
+    else:
+        # High complexity: multiple complications
+        # Start with a medium equation
+        base_equation = generate_equation_with_complexity(random_stream, solution, 4.0)
+
+        # Add multiple complications to reach target complexity
+        num_complications = min(int((target_complexity - 4.0) / 2.0) + 1, 4)
+        equation = add_simple_complications(
+            random_stream, base_equation, num_complications
+        )
+
+        return equation
+
+
+def add_simple_complications(
+    random_stream: random.Random, equation: Equals, num_complications: int
+) -> Equals:
+    """Add simple complications to an equation."""
+    current_equation = equation
+
+    for _ in range(num_complications):
+        # Choose a random complication type
+        complication_type = random_stream.choice(
+            [OperationType.ADD_ZERO, OperationType.MULTIPLY_BY_ONE]
+        )
+
+        # Generate a small random expression for the complication
+        complication_expr = random_nonzero_expression(
+            random_stream, 2.0, random_stream.randint(1, 5)
+        )
+
+        try:
+            if complication_type == OperationType.ADD_ZERO:
+                # Add the same expression to both sides
+                current_equation = current_equation.add_to_sides(complication_expr)
+            else:  # MULTIPLY_BY_ONE
+                # Multiply both sides by the expression
+                current_equation = current_equation.multiply_sides_by(complication_expr)
+        except Exception:
+            # If complication fails, skip it
+            continue
+
+    return current_equation
 
 
 def format_traditional(expression) -> str:
@@ -53,40 +131,12 @@ def generate_equation(cost_target: float, seed: Optional[int]) -> None:
     # Generate a random solution between 1 and 10 (appropriate for 12-year-olds)
     solution = random.randint(1, 10)
 
-    # Create equation with solution
-    equation_with_solution = EquationWithSolution(solution)
-
-    # Apply complications to reach target complexity
     # Use the same seed for the random stream to ensure reproducibility
     random_stream = random.Random(seed) if seed is not None else random.Random()
-    current_complexity = equation_with_solution.get_total_complexity()
 
-    while current_complexity < cost_target:
-        try:
-            complication = equation_with_solution.random_complication(
-                cost_target, random_stream, maintain_linearity=True
-            )
-            equation_with_solution.apply_complication(complication)
-
-            # Verify the solution is still valid
-            if not equation_with_solution.verify_solution():
-                # If solution becomes invalid, remove the last complication
-                equation_with_solution._complications.pop()
-                equation_with_solution._update_cache()
-                break
-
-            current_complexity = equation_with_solution.get_total_complexity()
-
-            # Safety check to prevent infinite loops
-            if len(equation_with_solution.complications) > 10:
-                break
-
-        except Exception:
-            # If any error occurs during complication, stop adding them
-            break
-
-    # Get the final equation
-    equation = equation_with_solution.get_current_equation()
+    # Generate equation with target complexity
+    equation = generate_equation_with_complexity(random_stream, solution, cost_target)
+    current_complexity = equation.complexity()
 
     # Format output
     click.echo("Generated Algebra Equation:")

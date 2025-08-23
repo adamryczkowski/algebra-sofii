@@ -10,9 +10,8 @@ import random
 import pytest
 import sympy as sp
 
-from algebra_sofii.expressions import Equals, Integer, Unknown, Addition, Multiplication
-from algebra_sofii.generators import random_nonzero_expression
-from algebra_sofii.complications import OperationType
+from algebra_sofii.expressions import Equals, Integer, Unknown, Multiplication
+from algebra_sofii.cli import generate_equation_with_complexity
 
 
 class TestProgressiveRandomEquations:
@@ -44,7 +43,7 @@ class TestProgressiveRandomEquations:
             solution = random_stream.randint(1, 9)
 
             # Create equation with progressive complexity
-            equation = self._generate_equation_with_complexity(
+            equation = generate_equation_with_complexity(
                 random_stream, solution, target_complexity
             )
 
@@ -80,86 +79,6 @@ class TestProgressiveRandomEquations:
         print(f"Complexity range: {min(complexities):.2f} - {max(complexities):.2f}")
         print(f"Average complexity: {sum(complexities) / len(complexities):.2f}")
         print(f"{'=' * 80}")
-
-    def _generate_equation_with_complexity(
-        self, random_stream: random.Random, solution: int, target_complexity: float
-    ) -> Equals:
-        """Generate an equation with approximately the target complexity."""
-
-        if target_complexity < 2.5:
-            # Simple equation: x = solution
-            return Equals.from_solution(
-                solution, swap=random_stream.choice([True, False])
-            )
-
-        elif target_complexity < 5.0:
-            # Medium complexity: linear expression = solution
-            # Generate a simple linear expression
-            coeff = random_stream.randint(1, 5)
-            constant = random_stream.randint(-5, 5)
-
-            # Create ax + b = solution, so x should equal (solution - b) / a
-            # But we want x = solution, so we create ax + b = a*solution + b
-            left_side = Addition(
-                [Multiplication([Integer(coeff), Unknown()]), Integer(constant)]
-            )
-            right_value = coeff * solution + constant
-            right_side = Integer(right_value)
-
-            equation = Equals(left_side, right_side)
-
-            # Add some complications if complexity target is higher
-            if target_complexity > 3.5:
-                equation = self._add_simple_complications(random_stream, equation, 1)
-
-            return equation
-
-        else:
-            # High complexity: multiple complications
-            # Start with a medium equation
-            base_equation = self._generate_equation_with_complexity(
-                random_stream, solution, 4.0
-            )
-
-            # Add multiple complications to reach target complexity
-            num_complications = min(int((target_complexity - 4.0) / 2.0) + 1, 4)
-            equation = self._add_simple_complications(
-                random_stream, base_equation, num_complications
-            )
-
-            return equation
-
-    def _add_simple_complications(
-        self, random_stream: random.Random, equation: Equals, num_complications: int
-    ) -> Equals:
-        """Add simple complications to an equation."""
-        current_equation = equation
-
-        for _ in range(num_complications):
-            # Choose a random complication type
-            complication_type = random_stream.choice(
-                [OperationType.ADD_ZERO, OperationType.MULTIPLY_BY_ONE]
-            )
-
-            # Generate a small random expression for the complication
-            complication_expr = random_nonzero_expression(
-                random_stream, 2.0, random_stream.randint(1, 5)
-            )
-
-            try:
-                if complication_type == OperationType.ADD_ZERO:
-                    # Add the same expression to both sides
-                    current_equation = current_equation.add_to_sides(complication_expr)
-                else:  # MULTIPLY_BY_ONE
-                    # Multiply both sides by the expression
-                    current_equation = current_equation.multiply_sides_by(
-                        complication_expr
-                    )
-            except Exception:
-                # If complication fails, skip it
-                continue
-
-        return current_equation
 
     def _test_single_equation(
         self, equation: Equals, expected_solution: int, complexity: float, index: int
@@ -253,7 +172,7 @@ class TestProgressiveRandomEquations:
 
         # Generate the same equation multiple times and verify consistency
         for _ in range(5):
-            equation = self._generate_equation_with_complexity(random_stream, 5, 3.0)
+            equation = generate_equation_with_complexity(random_stream, 5, 3.0)
 
             # String representation should be consistent
             repr1 = str(equation)
@@ -297,7 +216,7 @@ class TestProgressiveRandomEquations:
         # Generate equations with increasing target complexity
         for i in range(10):
             target_complexity = 1.0 + i * 0.5
-            equation = self._generate_equation_with_complexity(
+            equation = generate_equation_with_complexity(
                 random_stream, 1, target_complexity
             )
             complexities.append(equation.complexity())

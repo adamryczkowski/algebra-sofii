@@ -5,7 +5,7 @@ Complication classes for generating complex algebraic equations.
 import random
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional
+from typing import List
 
 from .expressions import Equals, Expression, ExpressionIndex
 from .generators import random_expression
@@ -183,16 +183,20 @@ class EquationWithSolution:
     """Container for an equation with its solution and applied complications."""
 
     _solution: int
+    _solution_swapped: bool
     _complications: List[Complication]
-    _cached_current_form: Optional[Expression]
-    _initial_equation: Expression
+    _cached_current_form: Expression
 
     def __init__(self, solution: int, swap: bool = False):
-        self._solution: int = solution
+        self._solution = solution
+        self._solution_swapped = swap
         self._complications: List[Complication] = []
-        self._cached_current_form: Optional[Expression] = None
-        self._initial_equation: Expression = Equals.from_solution(solution, swap)
-        self._update_cache()
+        self._cached_current_form = self._initial_equation
+
+    @property
+    def _initial_equation(self) -> Expression:
+        """The initial equation before complications."""
+        return Equals.from_solution(self._solution, self._solution_swapped)
 
     @property
     def solution(self) -> int:
@@ -205,7 +209,7 @@ class EquationWithSolution:
         return self._complications.copy()
 
     @property
-    def cached_current_form(self) -> Optional[Expression]:
+    def cached_current_form(self) -> Expression:
         """The cached current form of the equation."""
         return self._cached_current_form
 
@@ -217,7 +221,7 @@ class EquationWithSolution:
         self._cached_current_form = current
 
     def random_complication(
-        self, max_complexity: float, random_stream=None, maintain_linearity: bool = True
+        self, max_complexity: float, random_stream=None
     ) -> Complication:
         """Generate a random complication within complexity limits."""
         if random_stream is None:
@@ -249,12 +253,16 @@ class EquationWithSolution:
             operation = random_stream.choice(
                 [OperationType.ADD_ZERO, OperationType.MULTIPLY_BY_ONE]
             )
+            subexpression = self.cached_current_form[index]
 
             # Generate expression with appropriate complexity
             target_complexity = min(remaining_complexity / 2, 3.0)
 
             # For MULTIPLY_BY_ONE, exclude unknown to maintain linearity
-            exclude_unknown = operation == OperationType.MULTIPLY_BY_ONE
+            exclude_unknown = (
+                operation == OperationType.MULTIPLY_BY_ONE
+                and subexpression.maximum_power_of_unknown() >= 1
+            )
             expr = random_expression(random_stream, target_complexity, exclude_unknown)
 
             return ExpressionComplication(index, operation, expr)
@@ -269,7 +277,7 @@ class EquationWithSolution:
 
             # If maintaining linearity, exclude unknown from equation complications too
             # This prevents x * (expression with x) = quadratic terms
-            exclude_unknown = maintain_linearity and operation == OperationType.MULTIPLY
+            exclude_unknown = operation == OperationType.MULTIPLY
             expr = random_expression(random_stream, target_complexity, exclude_unknown)
 
             return EquationComplication(operation, expr)
