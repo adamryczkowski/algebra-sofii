@@ -123,7 +123,7 @@ def test_parentheses_in_inversion(expr, expected):
     [
         (Addition([Multiplication([two, x]), three]), "2 * x + 3"),
         (Addition([x, ChangedSign(Multiplication([two, three]))]), "x - 2 * 3"),
-        (Multiplication([Addition([x, one]), ChangedSign(two)]), "(x + 1) * -2"),
+        (Multiplication([Addition([x, one]), ChangedSign(two)]), "(x + 1) * (-2)"),
         (Inverted(Addition([Multiplication([two, x]), one])), "1/(2 * x + 1)"),
         (ChangedSign(Inverted(Addition([x, one]))), "-1/(x + 1)"),
         (
@@ -201,4 +201,63 @@ def test_equation_representations(expr, expected):
     ],
 )
 def test_edge_cases_and_special_scenarios(expr, expected):
+    assert str(expr) == expected
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        (Multiplication([x, Integer(-3)]), "x * (-3)"),
+        (Multiplication([Integer(6), Integer(-6), Integer(-4)]), "6 * (-6) * (-4)"),
+        (Multiplication([x, three, Integer(-6)]), "x * 3 * (-6)"),
+        (Multiplication([Integer(-2), x]), "(-2) * x"),
+        (Multiplication([Integer(-1), Integer(-1)]), "(-1) * (-1)"),
+        (
+            Addition([x, Integer(-3)]),
+            "x - 3",
+        ),  # Negative in addition should show as subtraction
+        (Addition([Integer(1), x, Integer(-3)]), "1 + x - 3"),
+        (Multiplication([Addition([x, Integer(-3)]), five]), "(x - 3) * 5"),
+    ],
+)
+def test_negative_integers_in_multiplication(expr, expected):
+    """Test that negative integers are properly parenthesized in multiplication contexts."""
+    assert str(expr) == expected
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        # Test cases based on user's example showing proper parentheses for negative numbers
+        (Multiplication([Integer(1), x, Integer(-3)]), "1 * x * (-3)"),
+        (Addition([Integer(1), x, Integer(-3)]), "1 + x - 3"),
+        (
+            Multiplication([Addition([Integer(1), x, Integer(-3)]), Integer(8), x]),
+            "(1 + x - 3) * 8 * x",
+        ),
+        (
+            ChangedSign(
+                Multiplication(
+                    [
+                        Addition([Integer(1), x, Integer(-3)]),
+                        Integer(6),
+                        Integer(1),
+                        Integer(-6),
+                        Integer(-4),
+                    ]
+                )
+            ),
+            "-((1 + x - 3) * 6 * 1 * (-6) * (-4))",
+        ),
+        # Additional edge cases with negative numbers
+        (Multiplication([Integer(-1), Addition([x, Integer(1)])]), "(-1) * (x + 1)"),
+        (Addition([x, ChangedSign(Integer(3))]), "x - 3"),
+        (
+            Multiplication([x, ChangedSign(Integer(3))]),
+            "x * (-3)",
+        ),  # ChangedSign vs negative Integer
+    ],
+)
+def test_complex_negative_number_scenarios(expr, expected):
+    """Test complex scenarios with negative numbers matching user's requirements."""
     assert str(expr) == expected

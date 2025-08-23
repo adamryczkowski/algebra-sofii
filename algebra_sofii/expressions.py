@@ -344,6 +344,11 @@ class Addition(MathOperator):
                 if isinstance(operand.operand, Addition):
                     inner_operand = f"({inner_operand})"
                 parts.append(f" - {inner_operand}")
+            # Handle negative integers to show as subtraction instead of + -3
+            elif isinstance(operand, Integer) and operand.value < 0 and i > 0:
+                # Show as subtraction (remove the negative sign and use - operator)
+                positive_value = str(-operand.value)
+                parts.append(f" - {positive_value}")
             else:
                 # Add parentheses around complex expressions for clarity
                 if isinstance(operand, Addition) and i > 0:
@@ -397,6 +402,14 @@ class Multiplication(MathOperator):
             operand_str = str(operand)
             # Add parentheses around addition expressions for clarity
             if isinstance(operand, Addition):
+                operand_str = f"({operand_str})"
+            # Add parentheses around negative integers to avoid ambiguity (e.g., x * (-3) not x * -3)
+            elif isinstance(operand, Integer) and operand.value < 0:
+                operand_str = f"({operand_str})"
+            # Add parentheses around ChangedSign of integers to avoid ambiguity (e.g., x * (-3) not x * -3)
+            elif isinstance(operand, ChangedSign) and isinstance(
+                operand.operand, Integer
+            ):
                 operand_str = f"({operand_str})"
             parts.append(operand_str)
         return " * ".join(parts)
