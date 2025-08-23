@@ -18,6 +18,7 @@ class OperationType(Enum):
     MULTIPLY_BY_ONE = "multiply_by_one"
     ADD = "add"
     MULTIPLY = "multiply"
+    INSERT_BRACKETS = "insert_brackets"
 
 
 class Complication(ABC):
@@ -230,6 +231,104 @@ class EquationElementMove(Complication):
         return f"EquationElementMove({self._right_side}, {self._elem_index})"
 
 
+class InsertBracketsComplication(Complication):
+    """Complication for inserting brackets around two elements in an addition with 3+ operands."""
+
+    _index: ExpressionIndex
+    _first_elem: int
+    _second_elem: int
+    _negate: bool
+
+    def __init__(
+        self, index: ExpressionIndex, first_elem: int, second_elem: int, negate: bool
+    ):
+        self._index: ExpressionIndex = index
+        self._first_elem: int = first_elem
+        self._second_elem: int = second_elem
+        self._negate: bool = negate
+
+    @property
+    def index(self) -> ExpressionIndex:
+        """The index of the addition expression to target."""
+        return self._index
+
+    @property
+    def first_elem(self) -> int:
+        """The index of the first element to bracket."""
+        return self._first_elem
+
+    @property
+    def second_elem(self) -> int:
+        """The index of the second element to bracket."""
+        return self._second_elem
+
+    @property
+    def negate(self) -> bool:
+        """Whether to negate the bracketed expression."""
+        return self._negate
+
+    def apply(self, expr: Expression) -> Expression:
+        """Apply the complication to the specified addition expression."""
+        from .expressions import ChangedSign
+
+        target_expr = expr[self._index]
+
+        if not isinstance(target_expr, Addition):
+            raise ValueError(
+                "InsertBracketsComplication can only be applied to Addition expressions"
+            )
+
+        if len(target_expr.operands) < 3:
+            raise ValueError(
+                "InsertBracketsComplication requires Addition with 3+ operands"
+            )
+
+        # Get the operands
+        operands = target_expr.operands
+
+        # Extract the two elements to bracket
+        first_operand = operands[self._first_elem]
+        second_operand = operands[self._second_elem]
+
+        # Create the bracketed expression (addition of the two elements)
+        bracketed_expr = Addition([first_operand, second_operand])
+
+        # Apply negation if needed
+        if self._negate:
+            bracketed_expr = ChangedSign(bracketed_expr)
+
+        # Create new operands list with the bracketed expression
+        new_operands = []
+        for i, operand in enumerate(operands):
+            if i == self._first_elem:
+                # Replace first element with bracketed expression
+                new_operands.append(bracketed_expr)
+            elif i == self._second_elem:
+                # Skip second element (it's now part of the bracketed expression)
+                continue
+            else:
+                new_operands.append(operand)
+
+        # Create new addition with updated operands
+        new_expr = Addition(new_operands)
+
+        return expr.replace_with(self._index, new_expr)
+
+    def complexity(self, expr: Expression) -> float:
+        """Return complexity increase."""
+        # Bracketing adds minimal complexity:
+        # - Creates a new Addition node (adds 1.0)
+        # - Potentially adds ChangedSign wrapper (adds 1.0 if negated)
+        # - No net change in operand complexity since we're just regrouping
+        base_increase = 1.0  # For the new Addition node
+        if self._negate:
+            base_increase += 1.0  # For the ChangedSign wrapper
+        return base_increase
+
+    def __repr__(self):
+        return f"InsertBracketsComplication({self._index}, {self._first_elem}, {self._second_elem}, {self._negate})"
+
+
 class EquationWithSolution:
     """Container for an equation with its solution and applied complications."""
 
@@ -285,10 +384,21 @@ class EquationWithSolution:
         remaining_complexity = max_complexity - current_complexity
 
         if remaining_complexity <= 1.0:
-            # Very simple complication
+            # Very simple complication - try InsertBrackets first since it has low cost
+            brackets_complication = self._try_generate_insert_brackets(random_stream)
+            if brackets_complication is not None:
+                return brackets_complication
+
+            # Fallback to element move
             return EquationElementMove(
                 right_side=random_stream.choice([True, False]), elem_index=0
             )
+
+        # Check if we can use InsertBrackets (low cost) - always use if available
+        if remaining_complexity <= 3.0:
+            brackets_complication = self._try_generate_insert_brackets(random_stream)
+            if brackets_complication is not None:  # Always use brackets if available
+                return brackets_complication
 
         # Choose type of complication
         complication_types = ["expression", "equation"]
@@ -332,6 +442,64 @@ class EquationWithSolution:
             expr = random_expression(random_stream, target_complexity, exclude_unknown)
 
             return EquationComplication(operation, expr)
+
+    def _try_generate_insert_brackets(self, random_stream) -> Complication | None:
+        """Try to generate an InsertBrackets complication if possible."""
+        if self._cached_current_form is None:
+            return None
+
+        # Find all Addition expressions with 3+ operands in the current equation
+        suitable_additions = []
+
+        def find_additions(expr, current_index):
+            if isinstance(expr, Addition) and len(expr.operands) >= 3:
+                suitable_additions.append(current_index)
+
+            # Recursively search in subexpressions
+            if isinstance(expr, Addition) or isinstance(expr, Multiplication):
+                for i, operand in enumerate(expr.operands):
+                    find_additions(
+                        operand, ExpressionIndex(current_index.indices + [i])
+                    )
+            elif isinstance(expr, Equals):
+                # For Equals expressions
+                find_additions(expr.left, ExpressionIndex(current_index.indices + [0]))
+                find_additions(expr.right, ExpressionIndex(current_index.indices + [1]))
+            elif hasattr(expr, "operand"):
+                # For unary operators like ChangedSign
+                find_additions(
+                    expr.operand, ExpressionIndex(current_index.indices + [0])
+                )
+
+        find_additions(self._cached_current_form, ExpressionIndex([]))
+
+        if not suitable_additions:
+            return None
+
+        # Pick a random suitable addition
+        target_index = random_stream.choice(suitable_additions)
+        target_addition = self._cached_current_form[target_index]
+
+        # We know this is an Addition with 3+ operands from our search
+        assert isinstance(target_addition, Addition)
+
+        # Pick two random elements to bracket
+        operand_count = len(target_addition.operands)
+        first_elem = random_stream.randint(0, operand_count - 1)
+        second_elem = random_stream.randint(0, operand_count - 1)
+
+        # Ensure they are different
+        while second_elem == first_elem:
+            second_elem = random_stream.randint(0, operand_count - 1)
+
+        # Ensure first_elem < second_elem for consistent ordering
+        if first_elem > second_elem:
+            first_elem, second_elem = second_elem, first_elem
+
+        # Random chance of negation
+        negate = random_stream.choice([True, False])
+
+        return InsertBracketsComplication(target_index, first_elem, second_elem, negate)
 
     def apply_complication(self, complication: Complication):
         """Apply a complication and update the cached form."""
