@@ -38,7 +38,8 @@ def random_expression(
             value = random_stream.randint(1, 9)
             expr = Integer(value)
 
-            if complexity_target >= 3.0 and random_stream.random() < 0.5:
+            # Increased probability for divisions: was 0.5, now 0.7
+            if complexity_target >= 2.5 and random_stream.random() < 0.7:
                 expr = Inverted(expr)
             if random_stream.random() < 0.3:
                 expr = ChangedSign(expr)
@@ -52,7 +53,8 @@ def random_expression(
             expr1 = Integer(val1)
             expr2 = Integer(val2)
 
-            if complexity_target >= 5.0 and random_stream.random() < 0.3:
+            # Increased probability for divisions: was 0.3, now 0.6, and lowered threshold
+            if complexity_target >= 4.0 and random_stream.random() < 0.6:
                 expr1 = Inverted(expr1)
             if random_stream.random() < 0.5:
                 expr2 = ChangedSign(expr2)
@@ -70,8 +72,8 @@ def random_expression(
         coeff = random_stream.randint(1, 9)
         coeff_expr = Integer(coeff)
 
-        # Occasionally add complexity with inversion (but only if target allows)
-        if complexity_target >= 3.5 and random_stream.random() < 0.3:
+        # Increased probability for divisions: was 0.3, now 0.6, and lowered threshold
+        if complexity_target >= 3.0 and random_stream.random() < 0.6:
             coeff_expr = Inverted(Integer(coeff))
 
         unknown = Unknown()
@@ -86,8 +88,8 @@ def random_expression(
         coeff = random_stream.randint(1, 9)
         coeff_expr = Integer(coeff)
 
-        # Add complexity modestly
-        if complexity_target >= 6.0 and random_stream.random() < 0.2:
+        # Increased probability for divisions: was 0.2, now 0.5, and lowered threshold
+        if complexity_target >= 4.5 and random_stream.random() < 0.5:
             coeff_expr = Inverted(Integer(coeff))
 
         unknown = Unknown()
@@ -100,8 +102,8 @@ def random_expression(
         constant = random_stream.randint(1, 9)
         constant_expr = Integer(constant)
 
-        # Add complexity sparingly
-        if complexity_target >= 7.0 and random_stream.random() < 0.1:
+        # Increased probability for divisions: was 0.1, now 0.4, and lowered threshold
+        if complexity_target >= 5.0 and random_stream.random() < 0.4:
             constant_expr = Inverted(constant_expr)
         if random_stream.random() < 0.5:  # 50% chance to subtract instead of add
             constant_expr = ChangedSign(constant_expr)
