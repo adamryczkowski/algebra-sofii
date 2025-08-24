@@ -386,12 +386,24 @@ class Addition(MathOperator):
             operand_str = str(operand)
             # Handle negative operands to show subtraction instead of + -
             if isinstance(operand, ChangedSign) and i > 0:
-                # Show as subtraction
-                inner_operand = str(operand.operand)
-                # Only add parentheses for addition expressions, not multiplication
-                if isinstance(operand.operand, Addition):
-                    inner_operand = f"({inner_operand})"
-                parts.append(f" - {inner_operand}")
+                # Special case: if the first operand is also ChangedSign and this is ChangedSign(Integer),
+                # show as + (-n) to preserve explicit negation structure
+                if isinstance(self._operands[0], ChangedSign) and isinstance(
+                    operand.operand, Integer
+                ):
+                    # Wrap the entire ChangedSign in parentheses for integers
+                    parts.append(f" + ({operand_str})")
+                # For other ChangedSign of Integer, show as subtraction (- n)
+                elif isinstance(operand.operand, Integer):
+                    inner_operand = str(operand.operand)
+                    parts.append(f" - {inner_operand}")
+                else:
+                    # For other ChangedSign operands, show as subtraction
+                    inner_operand = str(operand.operand)
+                    # Only add parentheses for addition expressions
+                    if isinstance(operand.operand, Addition):
+                        inner_operand = f"({inner_operand})"
+                    parts.append(f" - {inner_operand}")
             # Handle negative integers to show as subtraction instead of + -3
             elif isinstance(operand, Integer) and operand.value < 0 and i > 0:
                 # Show as subtraction (remove the negative sign and use - operator)
@@ -634,8 +646,9 @@ class ChangedSign(Expression):
     @overrides
     def __repr__(self):
         operand_str = str(self._operand)
-        # Add parentheses around complex expressions for clarity
-        if isinstance(self._operand, (Addition, Multiplication)):
+        # Add parentheses around complex expressions for clarity, but not around Inverted
+        # since -1/x is clearer than -(1/x)
+        if isinstance(self._operand, (Addition, Multiplication, ChangedSign)):
             operand_str = f"({operand_str})"
         return f"-{operand_str}"
 

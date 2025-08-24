@@ -189,7 +189,13 @@ def test_equation_representations(expr, expected):
 @pytest.mark.parametrize(
     "expr,expected",
     [
-        (ChangedSign(ChangedSign(x)), "--x"),
+        (ChangedSign(ChangedSign(x)), "-(-x)"),
+        (Addition([ChangedSign(x), Integer(3)]), "-x + 3"),
+        (Addition([ChangedSign(x), ChangedSign(Integer(3))]), "-x + (-3)"),
+        (
+            Multiplication([Integer(2), Addition([Unknown(), Integer(3)])]),
+            "2 * (x + 3)",
+        ),
         (Inverted(Inverted(x)), "1/(1/x)"),
         (Addition([x, zero]), "x + 0"),
         (Multiplication([x, one]), "x * 1"),

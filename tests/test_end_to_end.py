@@ -74,7 +74,7 @@ def test_one():
     random_state = RandomClass()
     eq.randomize(random_stream=random_state, max_complexity=20)
     print(f"Randomized equation: {eq}")
-    # assert repr(eq) == "x * 4 = (5 - 1) * --(3 * 1/(5 - 1)) * 4"
+    assert repr(eq) == "(1/7 - 6 + (x - (1/7 - 6))) * 2 = 3 * 2"
 
 
 if __name__ == "__main__":
