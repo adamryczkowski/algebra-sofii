@@ -1,8 +1,5 @@
-"""
-InsertBracketsComplication class for generating complex algebraic equations.
-"""
+# InsertBracketsComplication class for generating complex algebraic equations.
 
-import random
 from typing import Optional
 
 from .base import Complication
@@ -13,11 +10,19 @@ from ..expressions import (
     Multiplication,
     Equals,
     ChangedSign,
+    Inverted,
 )
+from ..random_class import RandomClass
+from overrides import overrides
 
 
 class InsertBracketsComplication(Complication):
     """Complication that inserts brackets around two elements in an addition with 3+ operands."""
+
+    _index: ExpressionIndex
+    _first_elem: int
+    _second_elem: int
+    _negate: bool
 
     def __init__(
         self, index: ExpressionIndex, first_elem: int, second_elem: int, negate: bool
@@ -48,6 +53,7 @@ class InsertBracketsComplication(Complication):
         return self._negate
 
     @property
+    @overrides
     def minimal_complexity(self) -> float:
         """Return the minimal complexity this complication will add."""
         # Creates new Addition node (1.0) + optionally ChangedSign (1.0)
@@ -57,10 +63,12 @@ class InsertBracketsComplication(Complication):
         return base_increase
 
     @property
+    @overrides
     def maximal_complexity(self) -> float:
         """Return the maximal complexity this complication can add."""
         return self.minimal_complexity
 
+    @overrides
     def apply(self, expr: Expression) -> Expression:
         """Apply the insert-brackets complication to the specified addition expression."""
         target_expr = expr[self._index]
@@ -87,28 +95,24 @@ class InsertBracketsComplication(Complication):
 
         # Apply negation if needed
         if self._negate:
-            bracketed_expr = ChangedSign(bracketed_expr)
+            bracketed_expr = ChangedSign(bracketed_expr.negated())
 
-        # Create new operands list with the bracketed expression
+        # Remove the first operand and replace the second with the bracketed expression
         new_operands = []
-        for i, operand in enumerate(operands):
+        for i, op in enumerate(operands):
             if i == self._first_elem:
-                # Replace first element with bracketed expression
-                new_operands.append(bracketed_expr)
-            elif i == self._second_elem:
-                # Skip second element (it's now part of the bracketed expression)
                 continue
+            elif i == self._second_elem:
+                new_operands.append(bracketed_expr)
             else:
-                new_operands.append(operand)
-
-        # Create new addition with updated operands
-        new_expr = Addition(new_operands)
-
-        return expr.replace_with(self._index, new_expr)
+                new_operands.append(op)
+        new_addition = Addition(new_operands)
+        return expr.replace_with(self._index, new_addition)
 
     @staticmethod
+    @overrides
     def randomize_from_stream(
-        random_stream: random.Random,
+        random_stream: RandomClass,
         base_expression: Expression,
         complexity_budget: float,
         exclude_unknown: bool = False,
@@ -121,7 +125,7 @@ class InsertBracketsComplication(Complication):
         # Find all Addition expressions with 3+ operands in the base expression
         suitable_additions = []
 
-        def find_additions(expr, current_index):
+        def find_additions(expr: Expression, current_index):
             if isinstance(expr, Addition) and len(expr.operands) >= 3:
                 suitable_additions.append(current_index)
 
@@ -134,7 +138,7 @@ class InsertBracketsComplication(Complication):
             elif isinstance(expr, Equals):
                 find_additions(expr.left, ExpressionIndex(current_index.indices + [0]))
                 find_additions(expr.right, ExpressionIndex(current_index.indices + [1]))
-            elif hasattr(expr, "operand"):
+            elif isinstance(expr, ChangedSign) or isinstance(expr, Inverted):
                 find_additions(
                     expr.operand, ExpressionIndex(current_index.indices + [0])
                 )
@@ -168,5 +172,6 @@ class InsertBracketsComplication(Complication):
 
         return InsertBracketsComplication(target_index, first_elem, second_elem, negate)
 
-    def __repr__(self):
+    @overrides
+    def __repr__(self) -> str:
         return f"InsertBracketsComplication({self._index}, {self._first_elem}, {self._second_elem}, {self._negate})"

@@ -1,11 +1,13 @@
-"""
-Expression class hierarchy for algebraic equation generation.
-"""
+# Expression class hierarchy for algebraic equation generation.
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 import sympy as sp
+from overrides import overrides
+
+from .random_class import RandomClass
 
 
 class ExpressionIndex:
@@ -21,7 +23,7 @@ class ExpressionIndex:
         """The list of indices that comprise this expression index."""
         return self._indices.copy()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"ExpressionIndex({self._indices})"
 
     def __eq__(self, other):
@@ -52,12 +54,12 @@ class Expression(ABC):
         return expr.subs(x, true_x)
 
     @abstractmethod
-    def random_subexpression(self, random_stream) -> ExpressionIndex:
+    def random_subexpression(self, random_stream: RandomClass) -> ExpressionIndex:
         """Return an index to a random subexpression."""
         pass
 
     @abstractmethod
-    def __getitem__(self, index: ExpressionIndex) -> "Expression":
+    def __getitem__(self, index: ExpressionIndex) -> Expression:
         """Return an expression stored by the index."""
         pass
 
@@ -71,31 +73,37 @@ class Expression(ABC):
         return self.complexity()
 
     @abstractmethod
-    def replace_with(self, index: ExpressionIndex, expr: "Expression") -> "Expression":
+    def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         """Replace the subnode with a new one."""
         pass
 
-    def add_expression(self, expr: "Expression") -> "Addition":
+    def add_expression(self, expr: Expression, left_side: bool) -> Addition:
         """Add the expression `expr`."""
-        return Addition([self, expr])
+        if left_side:
+            return Addition([expr, self])
+        else:
+            return Addition([self, expr])
 
-    def add_zero(self, expr: "Expression") -> "Addition":
+    def add_zero(self, expr: Expression) -> Addition:
         """Replace the node with a sum of the `expr` and a subtraction of former value minus the `expr`."""
         return Addition([expr, Addition([self, ChangedSign(expr)])])
 
-    def multiply_by_one(self, expr: "Expression") -> "Multiplication":
+    def multiply_by_one(self, expr: Expression) -> Multiplication:
         """Replace the node with the `expr` times division of former value by `expr`."""
         return Multiplication([expr, Multiplication([self, Inverted(expr)])])
 
-    def multiply_by(self, expr: "Expression") -> "Multiplication":
+    def multiply_by(self, expr: Expression, left_side: bool) -> Multiplication:
         """Multiply by the given expression."""
-        return Multiplication([self, expr])
+        if left_side:
+            return Multiplication([expr, self])
+        else:
+            return Multiplication([self, expr])
 
-    def negated(self) -> "Expression":
+    def negated(self) -> Expression:
         """Return the expression with changed sign operator."""
         return ChangedSign(self)
 
-    def inverted(self) -> "Expression":
+    def inverted(self) -> Expression:
         """Return a division of 1/self."""
         return Inverted(self)
 
@@ -113,13 +121,16 @@ class Integer(Expression):
         """The integer value."""
         return self._value
 
+    @overrides
     def maximum_power_of_unknown(self) -> int:
         """Integer constants have no unknown variable, so power is 0."""
         return 0
 
+    @overrides
     def to_sympy_expr(self) -> sp.Expr:
         return sp.Integer(self._value)
 
+    @overrides
     def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
         if max_depth <= 0:
             # Return a simple placeholder if we hit depth limit
@@ -127,34 +138,42 @@ class Integer(Expression):
 
         return super()._to_sympy_expr_depth_limited(max_depth)
 
+    @overrides
     def random_subexpression(self, random_stream) -> ExpressionIndex:
         return ExpressionIndex([])
 
+    @overrides
     def __getitem__(self, index: ExpressionIndex) -> Expression:
         if not index.indices:
             return self
         raise IndexError("Integer has no subexpressions")
 
+    @overrides
     def complexity(self) -> float:
         return 1.0
 
+    @overrides
     def _complexity_depth_limited(self, max_depth: int) -> float:
         if max_depth <= 0:
             return 1.0  # Return base complexity if we've hit the depth limit
 
         return super()._complexity_depth_limited(max_depth)
 
+    @overrides
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
             return expr
         raise IndexError("Integer has no subexpressions")
 
+    @overrides
     def negated(self) -> Expression:
         return Integer(-self._value)
 
+    @overrides
     def __repr__(self):
         return str(self._value)
 
+    @overrides
     def __eq__(self, other):
         return isinstance(other, Integer) and self._value == other.value
 
@@ -170,13 +189,16 @@ class Unknown(Expression):
         """The name of the unknown variable."""
         return "x"
 
+    @overrides
     def maximum_power_of_unknown(self) -> int:
         """Unknown variable has power 1."""
         return 1
 
+    @overrides
     def to_sympy_expr(self) -> sp.Expr:
         return sp.Symbol(self.name)
 
+    @overrides
     def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
         if max_depth <= 0:
             # Return a simple placeholder if we hit depth limit
@@ -184,31 +206,38 @@ class Unknown(Expression):
 
         return super()._to_sympy_expr_depth_limited(max_depth)
 
-    def random_subexpression(self, random_stream) -> ExpressionIndex:
+    @overrides
+    def random_subexpression(self, random_stream: RandomClass) -> ExpressionIndex:
         return ExpressionIndex([])
 
+    @overrides
     def __getitem__(self, index: ExpressionIndex) -> Expression:
         if not index.indices:
             return self
         raise IndexError("Unknown has no subexpressions")
 
+    @overrides
     def complexity(self) -> float:
         return 1.0
 
+    @overrides
     def _complexity_depth_limited(self, max_depth: int) -> float:
         if max_depth <= 0:
             return 1.0  # Return base complexity if we've hit the depth limit
 
         return super()._complexity_depth_limited(max_depth)
 
+    @overrides
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
             return expr
         raise IndexError("Unknown has no subexpressions")
 
+    @overrides
     def __repr__(self):
         return self.name
 
+    @overrides
     def __eq__(self, other):
         return isinstance(other, Unknown) and self.name == other.name
 
@@ -228,7 +257,8 @@ class MathOperator(Expression):
         """The list of operands for this mathematical operation."""
         return self._operands.copy()
 
-    def random_subexpression(self, random_stream) -> ExpressionIndex:
+    @overrides
+    def random_subexpression(self, random_stream: RandomClass) -> ExpressionIndex:
         # Choose random operand or self
         choices = list(range(len(self._operands))) + [-1]  # -1 for self
         choice = random_stream.choice(choices)
@@ -238,6 +268,7 @@ class MathOperator(Expression):
             sub_index = self._operands[choice].random_subexpression(random_stream)
             return ExpressionIndex([choice] + sub_index.indices)
 
+    @overrides
     def __getitem__(self, index: ExpressionIndex) -> Expression:
         if not index.indices:
             return self
@@ -247,10 +278,12 @@ class MathOperator(Expression):
         remaining_index = ExpressionIndex(index.indices[1:])
         return self._operands[operand_idx][remaining_index]
 
+    @overrides
     def complexity(self) -> float:
         # Use depth-limited complexity calculation to prevent infinite recursion
         return self._complexity_depth_limited(max_depth=50)
 
+    @overrides
     def _complexity_depth_limited(self, max_depth: int) -> float:
         if max_depth <= 0:
             return 1.0  # Return base complexity if we've hit the depth limit
@@ -262,6 +295,7 @@ class MathOperator(Expression):
             for op in self._operands
         )
 
+    @overrides
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
             return expr
@@ -297,14 +331,17 @@ class MathOperator(Expression):
 class Addition(MathOperator):
     """Addition operation."""
 
+    @overrides
     def maximum_power_of_unknown(self) -> int:
         """For addition, return the maximum power among all operands."""
         return max(op.maximum_power_of_unknown() for op in self._operands)
 
+    @overrides
     def to_sympy_expr(self) -> sp.Expr:
         # Add recursion protection to prevent infinite loops
         return self._to_sympy_expr_depth_limited(max_depth=50)
 
+    @overrides
     def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
         if max_depth <= 0:
             # Return a simple placeholder if we hit depth limit
@@ -326,10 +363,15 @@ class Addition(MathOperator):
             result = result + op_expr
         return result
 
-    def add_expression(self, expr: Expression) -> "Addition":
+    @overrides
+    def add_expression(self, expr: Expression, left_side: bool) -> Addition:
         """Override to take advantage of addition associativity."""
-        return Addition(self._operands + [expr])
+        if left_side:
+            return Addition([expr] + self._operands)
+        else:
+            return Addition(self._operands + [expr])
 
+    @overrides
     def __repr__(self):
         if not self._operands:
             return "0"
@@ -359,18 +401,27 @@ class Addition(MathOperator):
                     parts.append(f" + {operand_str}")
         return "".join(parts)
 
+    @overrides
+    def negated(self) -> Expression:
+        """Override to distribute negation over addition."""
+        negated_operands = [op.negated() for op in self._operands]
+        return Addition(negated_operands)
+
 
 class Multiplication(MathOperator):
     """Multiplication operation."""
 
+    @overrides
     def maximum_power_of_unknown(self) -> int:
         """For multiplication, return the sum of powers of all operands."""
         return sum(op.maximum_power_of_unknown() for op in self._operands)
 
+    @overrides
     def to_sympy_expr(self) -> sp.Expr:
         # Add recursion protection to prevent infinite loops
         return self._to_sympy_expr_depth_limited(max_depth=50)
 
+    @overrides
     def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
         if max_depth <= 0:
             # Return a simple placeholder if we hit depth limit
@@ -390,10 +441,15 @@ class Multiplication(MathOperator):
             result *= op_expr
         return result
 
-    def multiply_by(self, expr: Expression) -> "Multiplication":
+    @overrides
+    def multiply_by(self, expr: Expression, left_side: bool) -> Multiplication:
         """Override to take advantage of multiplication associativity."""
-        return Multiplication(self._operands + [expr])
+        if left_side:
+            return Multiplication([expr] + self._operands)
+        else:
+            return Multiplication(self._operands + [expr])
 
+    @overrides
     def __repr__(self):
         if not self._operands:
             return "1"
@@ -414,9 +470,24 @@ class Multiplication(MathOperator):
             parts.append(operand_str)
         return " * ".join(parts)
 
+    @overrides
+    def inverted(self) -> Expression:
+        """Override to distribute inversion over multiplication."""
+        inverted_operands = [op.inverted() for op in self._operands]
+        return Multiplication(inverted_operands)
+
+    @overrides
+    def negated(self) -> Expression:
+        """Override to distribute negation over multiplication."""
+        # Negate the first operand
+        new_operands = [self._operands[0].negated()] + self._operands[1:]
+        return Multiplication(new_operands)
+
 
 class ChangedSign(Expression):
     """Negation operation."""
+
+    _operand: Expression
 
     def __init__(self, operand: Expression):
         self._operand: Expression = operand
@@ -426,14 +497,17 @@ class ChangedSign(Expression):
         """The operand being negated."""
         return self._operand
 
+    @overrides
     def maximum_power_of_unknown(self) -> int:
         """For negation, return the same power as the operand."""
         return self._operand.maximum_power_of_unknown()
 
+    @overrides
     def to_sympy_expr(self) -> sp.Expr:
         # Add recursion protection to prevent infinite loops
         return self._to_sympy_expr_depth_limited(max_depth=50)
 
+    @overrides
     def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
         if max_depth <= 0:
             # Return a simple placeholder if we hit depth limit
@@ -446,7 +520,8 @@ class ChangedSign(Expression):
         )
         return -operand_expr
 
-    def random_subexpression(self, random_stream) -> ExpressionIndex:
+    @overrides
+    def random_subexpression(self, random_stream: RandomClass) -> ExpressionIndex:
         choices = [ExpressionIndex([]), ExpressionIndex([0])]
         choice = random_stream.choice(choices)
         if choice.indices == [0]:
@@ -454,6 +529,7 @@ class ChangedSign(Expression):
             return ExpressionIndex([0] + sub_index.indices)
         return choice
 
+    @overrides
     def __getitem__(self, index: ExpressionIndex) -> Expression:
         if not index.indices:
             return self
@@ -462,10 +538,12 @@ class ChangedSign(Expression):
             return self._operand[remaining_index]
         raise IndexError("ChangedSign has only one operand at index 0")
 
+    @overrides
     def complexity(self) -> float:
         # Use depth-limited complexity calculation to prevent infinite recursion
         return self._complexity_depth_limited(max_depth=50)
 
+    @overrides
     def _complexity_depth_limited(self, max_depth: int) -> float:
         if max_depth <= 0:
             return 1.0  # Return base complexity if we've hit the depth limit
@@ -476,6 +554,7 @@ class ChangedSign(Expression):
             else self._operand.complexity()
         )
 
+    @overrides
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
             return expr
@@ -485,6 +564,7 @@ class ChangedSign(Expression):
             return ChangedSign(new_operand)
         raise IndexError("ChangedSign has only one operand at index 0")
 
+    @overrides
     def negated(self) -> Expression:
         """Cancel out double negation."""
         # If operand is also a ChangedSign, return its operand (cancels out double negation)
@@ -493,6 +573,7 @@ class ChangedSign(Expression):
         # Otherwise return the operand (single negation cancellation)
         return self._operand
 
+    @overrides
     def __repr__(self):
         operand_str = str(self._operand)
         # Add parentheses around complex expressions for clarity
@@ -500,12 +581,15 @@ class ChangedSign(Expression):
             operand_str = f"({operand_str})"
         return f"-{operand_str}"
 
+    @overrides
     def __eq__(self, other):
         return isinstance(other, ChangedSign) and self._operand == other.operand
 
 
 class Inverted(Expression):
     """Division by expression (1/x operation)."""
+
+    _operand: Expression
 
     def __init__(self, operand: Expression):
         self._operand: Expression = operand
@@ -515,14 +599,17 @@ class Inverted(Expression):
         """The operand being inverted."""
         return self._operand
 
+    @overrides
     def maximum_power_of_unknown(self) -> int:
         """For division (1/operand), return negative of operand's power."""
         return -self._operand.maximum_power_of_unknown()
 
+    @overrides
     def to_sympy_expr(self) -> sp.Expr:
         # Add recursion protection to prevent infinite loops
         return self._to_sympy_expr_depth_limited(max_depth=50)
 
+    @overrides
     def _to_sympy_expr_depth_limited(self, max_depth: int) -> sp.Expr:
         if max_depth <= 0:
             # Return a simple placeholder if we hit depth limit
@@ -535,7 +622,8 @@ class Inverted(Expression):
         )
         return 1 / operand_expr
 
-    def random_subexpression(self, random_stream) -> ExpressionIndex:
+    @overrides
+    def random_subexpression(self, random_stream: RandomClass) -> ExpressionIndex:
         choices = [ExpressionIndex([]), ExpressionIndex([0])]
         choice = random_stream.choice(choices)
         if choice.indices == [0]:
@@ -543,6 +631,7 @@ class Inverted(Expression):
             return ExpressionIndex([0] + sub_index.indices)
         return choice
 
+    @overrides
     def __getitem__(self, index: ExpressionIndex) -> Expression:
         if not index.indices:
             return self
@@ -551,10 +640,12 @@ class Inverted(Expression):
             return self._operand[remaining_index]
         raise IndexError("Inverted has only one operand at index 0")
 
+    @overrides
     def complexity(self) -> float:
         # Use depth-limited complexity calculation to prevent infinite recursion
         return self._complexity_depth_limited(max_depth=50)
 
+    @overrides
     def _complexity_depth_limited(self, max_depth: int) -> float:
         if max_depth <= 0:
             return 2.0  # Return base complexity if we've hit the depth limit
@@ -565,6 +656,7 @@ class Inverted(Expression):
             else self._operand.complexity()
         )
 
+    @overrides
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
             return expr
@@ -574,6 +666,7 @@ class Inverted(Expression):
             return Inverted(new_operand)
         raise IndexError("Inverted has only one operand at index 0")
 
+    @overrides
     def inverted(self) -> Expression:
         """Cancel out double inversion."""
         # If operand is also an Inverted, return its operand (cancels out double inversion)
@@ -582,6 +675,7 @@ class Inverted(Expression):
         # Otherwise return the operand (single inversion cancellation)
         return self._operand
 
+    @overrides
     def __repr__(self):
         operand_str = str(self._operand)
         # Add parentheses around complex expressions for clarity in denominator
@@ -590,12 +684,16 @@ class Inverted(Expression):
             operand_str = f"({operand_str})"
         return f"1/{operand_str}"
 
+    @overrides
     def __eq__(self, other):
         return isinstance(other, Inverted) and self._operand == other.operand
 
 
 class Equals(Expression):
     """Equation with left and right sides."""
+
+    _left: Expression
+    _right: Expression
 
     def __init__(self, left: Expression, right: Expression):
         self._left: Expression = left
@@ -612,7 +710,7 @@ class Equals(Expression):
         return self._right
 
     @classmethod
-    def from_solution(cls, solution: int, swap: bool = False) -> "Equals":
+    def from_solution(cls, solution: int, swap: bool = False) -> Equals:
         """Create trivial equation x == solution or solution == x."""
         unknown = Unknown()
         integer = Integer(solution)
@@ -621,6 +719,7 @@ class Equals(Expression):
         else:
             return cls(unknown, integer)
 
+    @overrides
     def maximum_power_of_unknown(self) -> int:
         """For equations, return the maximum power between left and right sides."""
         return max(
@@ -628,11 +727,13 @@ class Equals(Expression):
             self._right.maximum_power_of_unknown(),
         )
 
+    @overrides
     def to_sympy_expr(self) -> sp.Expr:
         # Return the equation as an expression (left - right = 0)
         return self._left.to_sympy_expr() - self._right.to_sympy_expr()
 
-    def random_subexpression(self, random_stream) -> ExpressionIndex:
+    @overrides
+    def random_subexpression(self, random_stream: RandomClass) -> ExpressionIndex:
         choices = [ExpressionIndex([0]), ExpressionIndex([1])]  # left or right side
         choice = random_stream.choice(choices)
         if choice.indices[0] == 0:
@@ -642,6 +743,7 @@ class Equals(Expression):
             sub_index = self._right.random_subexpression(random_stream)
             return ExpressionIndex([1] + sub_index.indices)
 
+    @overrides
     def __getitem__(self, index: ExpressionIndex) -> Expression:
         if not index.indices:
             return self
@@ -654,9 +756,11 @@ class Equals(Expression):
         else:
             raise IndexError("Equals has only left (0) and right (1) sides")
 
+    @overrides
     def complexity(self) -> float:
         return self._left.complexity() + self._right.complexity()
 
+    @overrides
     def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
         if not index.indices:
             return expr
@@ -673,24 +777,25 @@ class Equals(Expression):
         else:
             raise IndexError("Equals has only left (0) and right (1) sides")
 
-    def multiply_sides_by(self, expr: Expression) -> "Equals":
+    def multiply_sides_by(self, expr: Expression, left_side: bool) -> Equals:
         """Multiply both sides by an expression."""
-        new_left = self._left.multiply_by(expr)
-        new_right = self._right.multiply_by(expr)
+        new_left = self._left.multiply_by(expr, left_side)
+        new_right = self._right.multiply_by(expr, left_side)
         return Equals(new_left, new_right)
 
-    def add_to_sides(self, expr: Expression) -> "Equals":
+    def add_to_sides(self, expr: Expression, left_side: bool) -> Equals:
         """Add an expression to both sides of an equation."""
-        new_left = self._left.add_expression(expr)
-        new_right = self._right.add_expression(expr)
+        new_left = self._left.add_expression(expr, left_side)
+        new_right = self._right.add_expression(expr, left_side)
         return Equals(new_left, new_right)
 
-    def swap_side_of_element(self, elem_index: int) -> "Equals":
+    def swap_side_of_element(self, elem_index: int) -> Equals:
         """Swap sides of an element, changing operation as needed."""
         # This is a complex operation that depends on the structure
         # For now, implement a basic version
         # TODO: Implement proper element swapping logic
         return self
 
+    @overrides
     def __repr__(self):
         return f"{self._left} = {self._right}"

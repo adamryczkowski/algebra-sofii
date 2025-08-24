@@ -1,12 +1,11 @@
-"""
-NegateComplication class for generating complex algebraic equations.
-"""
+# NegateComplication class for generating complex algebraic equations.
 
-import random
 from typing import Optional
 
 from .base import Complication
 from ..expressions import Expression, ExpressionIndex, ChangedSign
+from ..random_class import RandomClass
+from overrides import overrides
 
 
 class NegateComplication(Complication):
@@ -21,26 +20,30 @@ class NegateComplication(Complication):
         return self._index
 
     @property
+    @overrides
     def minimal_complexity(self) -> float:
         """Return the minimal complexity this complication will add."""
         # Adds double ChangedSign wrapper (2.0) but it's a no-op
         return 2.0
 
     @property
+    @overrides
     def maximal_complexity(self) -> float:
         """Return the maximal complexity this complication can add."""
         return 2.0
 
+    @overrides
     def apply(self, expr: Expression) -> Expression:
         """Apply the negate complication twice to the specified subexpression (no-op)."""
         target_expr = expr[self._index]
         # Apply negation twice to make it a no-op: -(-expr) = expr
-        new_expr = ChangedSign(ChangedSign(target_expr))
+        new_expr = ChangedSign(target_expr.negated())
         return expr.replace_with(self._index, new_expr)
 
     @staticmethod
+    @overrides
     def randomize_from_stream(
-        random_stream: random.Random,
+        random_stream: RandomClass,
         base_expression: Expression,
         complexity_budget: float,
         exclude_unknown: bool = False,
@@ -55,5 +58,6 @@ class NegateComplication(Complication):
 
         return NegateComplication(index)
 
+    @overrides
     def __repr__(self):
         return f"NegateComplication({self._index})"

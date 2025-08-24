@@ -11,10 +11,11 @@ from .expressions import (
     Multiplication,
     Unknown,
 )
+from .random_class import RandomClass
 
 
 def random_expression(
-    random_stream, complexity_target: float, exclude_unknown: bool = False
+    random_stream: RandomClass, complexity_target: float, exclude_unknown: bool = False
 ) -> Expression:
     """
     Generate a random expression in the form of:
@@ -39,9 +40,9 @@ def random_expression(
             expr = Integer(value)
 
             # Increased probability for divisions: was 0.5, now 0.7
-            if complexity_target >= 2.5 and random_stream.random() < 0.7:
+            if complexity_target >= 2.5 and random_stream.rand_coinflip(0.7):
                 expr = Inverted(expr)
-            if random_stream.random() < 0.3:
+            if random_stream.rand_coinflip(0.3):
                 expr = ChangedSign(expr)
 
             return expr
@@ -54,9 +55,9 @@ def random_expression(
             expr2 = Integer(val2)
 
             # Increased probability for divisions: was 0.3, now 0.6, and lowered threshold
-            if complexity_target >= 4.0 and random_stream.random() < 0.6:
+            if complexity_target >= 4.0 and random_stream.rand_coinflip(0.6):
                 expr1 = Inverted(expr1)
-            if random_stream.random() < 0.5:
+            if random_stream.rand_coinflip(0.5):
                 expr2 = ChangedSign(expr2)
 
             return Addition([expr1, expr2])
@@ -73,12 +74,12 @@ def random_expression(
         coeff_expr = Integer(coeff)
 
         # Increased probability for divisions: was 0.3, now 0.6, and lowered threshold
-        if complexity_target >= 3.0 and random_stream.random() < 0.6:
+        if complexity_target >= 3.0 and random_stream.rand_coinflip(0.6):
             coeff_expr = Inverted(Integer(coeff))
 
         unknown = Unknown()
         # Occasionally negate unknown if complexity allows
-        if complexity_target >= 3.0 and random_stream.random() < 0.2:
+        if complexity_target >= 3.0 and random_stream.rand_coinflip(0.2):
             unknown = ChangedSign(unknown)
 
         return Multiplication([coeff_expr, unknown])
@@ -89,11 +90,11 @@ def random_expression(
         coeff_expr = Integer(coeff)
 
         # Increased probability for divisions: was 0.2, now 0.5, and lowered threshold
-        if complexity_target >= 4.5 and random_stream.random() < 0.5:
+        if complexity_target >= 4.5 and random_stream.rand_coinflip(0.5):
             coeff_expr = Inverted(Integer(coeff))
 
         unknown = Unknown()
-        if complexity_target >= 5.5 and random_stream.random() < 0.1:
+        if complexity_target >= 5.5 and random_stream.rand_coinflip(0.1):
             unknown = ChangedSign(unknown)
 
         linear_term = Multiplication([coeff_expr, unknown])
@@ -103,9 +104,9 @@ def random_expression(
         constant_expr = Integer(constant)
 
         # Increased probability for divisions: was 0.1, now 0.4, and lowered threshold
-        if complexity_target >= 5.0 and random_stream.random() < 0.4:
+        if complexity_target >= 5.0 and random_stream.rand_coinflip(0.4):
             constant_expr = Inverted(constant_expr)
-        if random_stream.random() < 0.5:  # 50% chance to subtract instead of add
+        if random_stream.rand_coinflip(0.5):  # 50% chance to subtract instead of add
             constant_expr = ChangedSign(constant_expr)
 
         return Addition([linear_term, constant_expr])

@@ -27,6 +27,7 @@ from .expressions import (
     Unknown,
 )
 from .generators import random_expression
+from .random_class import RandomClass
 
 __all__ = [
     # Complications
@@ -53,4 +54,5 @@ __all__ = [
     "Unknown",
     # Generators
     "random_expression",
+    "RandomClass",
 ]

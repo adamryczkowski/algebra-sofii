@@ -1,13 +1,12 @@
-"""
-EquationWithSolution class for generating complex algebraic equations.
-"""
+# EquationWithSolution class for generating complex algebraic equations.
+from __future__ import annotations
 
 import random
-from typing import List, Optional
 
 from .base import Complication
 from .config import EQUATION_COMPLICATION_WEIGHTS, COMPLICATION_CLASSES
 from ..expressions import Expression, Equals
+from ..random_class import RandomClass
 
 
 class EquationWithSolution:
@@ -15,13 +14,18 @@ class EquationWithSolution:
 
     _solution: int
     _solution_swapped: bool
-    _complications: List[Complication]
+    _complications: list[Complication]
     _cached_current_form: Expression
 
-    def __init__(self, solution: int, swap: bool = False):
+    @staticmethod
+    def MakeEquation(solution: int, swap: bool = False) -> EquationWithSolution:
+        """Factory method to create an EquationWithSolution instance."""
+        return EquationWithSolution(solution, swap, [])
+
+    def __init__(self, solution: int, swap: bool, complications: list[Complication]):
         self._solution = solution
         self._solution_swapped = swap
-        self._complications: List[Complication] = []
+        self._complications = complications
         self._cached_current_form = self._initial_equation
 
     @property
@@ -35,7 +39,7 @@ class EquationWithSolution:
         return self._solution
 
     @property
-    def complications(self) -> List[Complication]:
+    def complications(self) -> list[Complication]:
         """The list of complications applied to the equation."""
         return self._complications.copy()
 
@@ -52,7 +56,7 @@ class EquationWithSolution:
         self._cached_current_form = current
 
     def add_random_complication(
-        self, max_complexity: float, random_stream: Optional[random.Random] = None
+        self, max_complexity: float, random_stream: RandomClass
     ) -> None:
         """Add a random complication within complexity limits."""
         if random_stream is None:
@@ -72,9 +76,9 @@ class EquationWithSolution:
             # Try to create a sample complication to check minimal complexity
             # Use exclude_unknown=True to ensure equation remains linear
             sample_complication = comp_class.randomize_from_stream(
-                random.Random(42),
-                self._cached_current_form,
-                remaining_complexity,
+                random_stream=random_stream,
+                base_expression=self._cached_current_form,
+                complexity_budget=remaining_complexity,
                 exclude_unknown=True,
             )
 
@@ -105,7 +109,7 @@ class EquationWithSolution:
         # Apply the complication
         self.apply_complication(complication)
 
-    def randomize(self, random_stream: random.Random, max_complexity: float) -> None:
+    def randomize(self, random_stream: RandomClass, max_complexity: float) -> None:
         """Randomize the equation up to the target complexity."""
         while True:
             current_complexity = self.get_total_complexity()
@@ -123,6 +127,7 @@ class EquationWithSolution:
         """Apply a complication and update the cached form."""
         self._complications.append(complication)
         self._update_cache()
+        self.verify_solution()
 
     def get_current_equation(self) -> Expression:
         """Get the current form of the equation."""
@@ -151,4 +156,4 @@ class EquationWithSolution:
             return False
 
     def __repr__(self):
-        return f"EquationWithSolution(solution={self._solution}, complications={len(self._complications)})"
+        return repr(self._cached_current_form)

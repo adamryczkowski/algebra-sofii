@@ -1,12 +1,10 @@
-"""
-Base complication class for generating complex algebraic equations.
-"""
+# Base complication class for generating complex algebraic equations.
 
-import random
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from ..expressions import Expression
+from ..random_class import RandomClass
 
 
 class Complication(ABC):
@@ -32,10 +30,14 @@ class Complication(ABC):
     @staticmethod
     @abstractmethod
     def randomize_from_stream(
-        random_stream: random.Random,
+        random_stream: RandomClass,
         base_expression: Expression,
         complexity_budget: float,
         exclude_unknown: bool = False,
     ) -> Optional["Complication"]:
         """Create a random instance of this complication within the complexity budget."""
+        pass
+
+    @abstractmethod
+    def __repr__(self) -> str:
         pass
