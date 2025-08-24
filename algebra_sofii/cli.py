@@ -119,7 +119,13 @@ def add_simple_complications(
     return current_equation
 
 
-@click.command()
+@click.group()
+def cli():
+    """Algebra equation generator for 12-year-old students."""
+    pass
+
+
+@cli.command()
 @click.option(
     "-c",
     "--cost-target",
@@ -130,9 +136,9 @@ def add_simple_complications(
 @click.option(
     "--seed", type=int, default=None, help="Random seed for reproducible results"
 )
-def generate_equation(cost_target: float, seed: Optional[int]) -> None:
+def generate(cost_target: float, seed: Optional[int]) -> None:
     """
-    Generate an algebraic equation with solution for 12-year-old students.
+    Generate a single algebraic equation with solution.
 
     The cost-target parameter controls the complexity of the generated equation:
     - 1-2: Simple constants or basic linear terms
@@ -174,5 +180,88 @@ def generate_equation(cost_target: float, seed: Optional[int]) -> None:
         click.echo(f"✗ Solution verification error: {e}")
 
 
-if __name__ == "__main__":
-    generate_equation()
+@cli.command()
+@click.argument("count", type=int)
+@click.option(
+    "-c",
+    "--cost-target",
+    type=float,
+    default=5.0,
+    help="Target complexity/cost for the generated equations (default: 5.0)",
+)
+@click.option(
+    "--seed", type=int, default=None, help="Random seed for reproducible results"
+)
+@click.option(
+    "--verify/--no-verify",
+    default=False,
+    help="Verify solutions for each equation (default: False)",
+)
+def batch(count: int, cost_target: float, seed: Optional[int], verify: bool) -> None:
+    """
+    Generate multiple algebraic equations with solutions.
+
+    COUNT is the number of equations to generate.
+
+    Example: algebra-equation batch 30 -c 50
+    """
+    if count <= 0:
+        click.echo("Error: Count must be a positive integer")
+        return
+
+    if seed is not None:
+        random_stream = RandomClass.FromFixedSeed(seed)
+    else:
+        random_stream = RandomClass()
+
+    equations = []
+    solutions = []
+    verified_count = 0
+    failed_count = 0
+
+    # Generate all equations and solutions
+    for i in range(count):
+        # Generate a random solution between 1 and 10 (appropriate for 12-year-olds)
+        solution = random_stream.randint(1, 7)
+
+        # Generate equation with target complexity
+        equation = generate_equation_with_complexity(
+            random_stream, solution, cost_target
+        )
+
+        equations.append(str(equation))
+        solutions.append(solution)
+
+        # Optional verification
+        if verify:
+            try:
+                if hasattr(equation, "left") and hasattr(equation, "right"):
+                    left_val = equation.left.evaluate(solution)  # type: ignore
+                    right_val = equation.right.evaluate(solution)  # type: ignore
+                    if abs(left_val - right_val) < 1e-10:
+                        verified_count += 1
+                    else:
+                        failed_count += 1
+                else:
+                    failed_count += 1
+            except Exception:
+                failed_count += 1
+
+    # Output in the requested format
+    click.echo("Equations:")
+    for i, equation in enumerate(equations, 1):
+        click.echo(f"{i}. {equation}")
+
+    click.echo("")  # Vertical space
+
+    click.echo("Solutions:")
+    for i, solution in enumerate(solutions, 1):
+        click.echo(f"{i}. x = {solution}")
+
+    # Optional verification summary
+    if verify:
+        click.echo("")
+        if failed_count > 0:
+            click.echo(f"Verification: {verified_count} passed, {failed_count} failed")
+        else:
+            click.echo(f"All {verified_count} solutions verified successfully")

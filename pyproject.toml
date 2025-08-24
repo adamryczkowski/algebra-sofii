@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-algebra-equation = "algebra_sofii.cli:generate_equation"
+algebra-equation = "algebra_sofii.cli:cli"
 
 
 [tool.poetry]
