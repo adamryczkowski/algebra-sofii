@@ -46,6 +46,7 @@ class MultiplyEquationComplication(Complication):
         random_stream: random.Random,
         base_expression: Expression,
         complexity_budget: float,
+        exclude_unknown: bool = False,
     ) -> Optional["MultiplyEquationComplication"]:
         """Create a random MultiplyEquationComplication within the complexity budget."""
         # Need at least 2.0 complexity for the minimal case
@@ -55,15 +56,22 @@ class MultiplyEquationComplication(Complication):
         # Generate expression with appropriate complexity
         expr_budget = complexity_budget / 2.0  # Since we duplicate it
 
-        # Exclude unknown to maintain linearity
+        # Ensure we have a reasonable minimum budget for expression generation
+        expr_budget = min(expr_budget, 2.5) if exclude_unknown else expr_budget
+
+        # Always exclude unknown to maintain linearity (override parameter)
         expr = random_expression(random_stream, expr_budget, exclude_unknown=True)
 
         # Double check that the resulting complication fits within budget
         result = MultiplyEquationComplication(expr)
         if result.minimal_complexity > complexity_budget:
-            # If still too complex, try with a simpler expression
+            # If still too complex, try with a minimal expression
             expr = random_expression(random_stream, 1.0, exclude_unknown=True)
             result = MultiplyEquationComplication(expr)
+
+            # If still doesn't fit, return None
+            if result.minimal_complexity > complexity_budget:
+                return None
 
         return result
 

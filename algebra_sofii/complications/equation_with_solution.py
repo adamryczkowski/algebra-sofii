@@ -70,8 +70,12 @@ class EquationWithSolution:
             comp_class = COMPLICATION_CLASSES[comp_name]
 
             # Try to create a sample complication to check minimal complexity
+            # Use exclude_unknown=True to ensure equation remains linear
             sample_complication = comp_class.randomize_from_stream(
-                random.Random(42), self._cached_current_form, remaining_complexity
+                random.Random(42),
+                self._cached_current_form,
+                remaining_complexity,
+                exclude_unknown=True,
             )
 
             if sample_complication is not None:
@@ -87,9 +91,12 @@ class EquationWithSolution:
         )[0]
         selected_class = COMPLICATION_CLASSES[selected_name]
 
-        # Create the actual complication
+        # Create the actual complication with exclude_unknown=True to maintain linearity
         complication = selected_class.randomize_from_stream(
-            random_stream, self._cached_current_form, remaining_complexity
+            random_stream,
+            self._cached_current_form,
+            remaining_complexity,
+            exclude_unknown=True,
         )
 
         if complication is None:

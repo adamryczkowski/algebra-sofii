@@ -35,6 +35,7 @@ class Complication(ABC):
         random_stream: random.Random,
         base_expression: Expression,
         complexity_budget: float,
+        exclude_unknown: bool = False,
     ) -> Optional["Complication"]:
         """Create a random instance of this complication within the complexity budget."""
         pass

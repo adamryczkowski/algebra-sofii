@@ -111,6 +111,7 @@ class InsertBracketsComplication(Complication):
         random_stream: random.Random,
         base_expression: Expression,
         complexity_budget: float,
+        exclude_unknown: bool = False,
     ) -> Optional["InsertBracketsComplication"]:
         """Create a random InsertBracketsComplication within the complexity budget."""
         # Need at least 1.0 complexity for the minimal case

@@ -49,6 +49,7 @@ class MultiplyByOneComplication(Complication):
         random_stream: random.Random,
         base_expression: Expression,
         complexity_budget: float,
+        exclude_unknown: bool = False,
     ) -> Optional["MultiplyByOneComplication"]:
         """Create a random MultiplyByOneComplication within the complexity budget."""
         # Need at least 3.0 complexity for the minimal case (1.0 for expr + 2.0 for structure)
@@ -62,15 +63,17 @@ class MultiplyByOneComplication(Complication):
         # Generate expression with appropriate complexity
         expr_budget = complexity_budget - 2.0  # Reserve 2.0 for structure
 
-        # Exclude unknown if multiplying by expression containing unknown to maintain linearity
-        exclude_unknown = subexpression.maximum_power_of_unknown() >= 1
-        expr = random_expression(random_stream, expr_budget, exclude_unknown)
+        # Exclude unknown if requested OR if multiplying by expression containing unknown to maintain linearity
+        exclude_unknown_final = (
+            exclude_unknown or subexpression.maximum_power_of_unknown() >= 1
+        )
+        expr = random_expression(random_stream, expr_budget, exclude_unknown_final)
 
         # Double check that the resulting complication fits within budget
         result = MultiplyByOneComplication(index, expr)
         if result.minimal_complexity > complexity_budget:
             # If still too complex, try with a simpler expression
-            expr = random_expression(random_stream, 1.0, exclude_unknown)
+            expr = random_expression(random_stream, 1.0, exclude_unknown_final)
             result = MultiplyByOneComplication(index, expr)
 
         return result

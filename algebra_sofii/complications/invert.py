@@ -43,6 +43,7 @@ class InvertComplication(Complication):
         random_stream: random.Random,
         base_expression: Expression,
         complexity_budget: float,
+        exclude_unknown: bool = False,
     ) -> Optional["InvertComplication"]:
         """Create a random InvertComplication within the complexity budget."""
         # Need at least 2.0 complexity for double inversion

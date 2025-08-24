@@ -46,6 +46,7 @@ class AddToEquationComplication(Complication):
         random_stream: random.Random,
         base_expression: Expression,
         complexity_budget: float,
+        exclude_unknown: bool = False,
     ) -> Optional["AddToEquationComplication"]:
         """Create a random AddToEquationComplication within the complexity budget."""
         # Need at least 2.0 complexity for the minimal case (2 * 1.0 for empty expr)
@@ -54,14 +55,22 @@ class AddToEquationComplication(Complication):
 
         # Generate expression with appropriate complexity
         expr_budget = complexity_budget / 2.0  # Since we duplicate it
-        expr = random_expression(random_stream, expr_budget, exclude_unknown=False)
+
+        # Ensure we have a reasonable minimum budget for expression generation
+        expr_budget = min(expr_budget, 2.5) if exclude_unknown else expr_budget
+
+        expr = random_expression(random_stream, expr_budget, exclude_unknown)
 
         # Double check that the resulting complication fits within budget
         result = AddToEquationComplication(expr)
         if result.minimal_complexity > complexity_budget:
-            # If still too complex, try with a simpler expression
-            expr = random_expression(random_stream, 1.0, exclude_unknown=False)
+            # If still too complex, try with a minimal expression
+            expr = random_expression(random_stream, 1.0, exclude_unknown)
             result = AddToEquationComplication(expr)
+
+            # If still doesn't fit, return None
+            if result.minimal_complexity > complexity_budget:
+                return None
 
         return result
 

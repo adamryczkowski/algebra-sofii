@@ -49,6 +49,7 @@ class AddZeroComplication(Complication):
         random_stream: random.Random,
         base_expression: Expression,
         complexity_budget: float,
+        exclude_unknown: bool = False,
     ) -> Optional["AddZeroComplication"]:
         """Create a random AddZeroComplication within the complexity budget."""
         # Need at least 3.0 complexity for the minimal case (1.0 for expr + 2.0 for structure)
@@ -60,13 +61,13 @@ class AddZeroComplication(Complication):
 
         # Generate expression with appropriate complexity, ensuring we stay within budget
         expr_budget = complexity_budget - 2.0  # Reserve 2.0 for structure
-        expr = random_expression(random_stream, expr_budget, exclude_unknown=False)
+        expr = random_expression(random_stream, expr_budget, exclude_unknown)
 
         # Double check that the resulting complication fits within budget
         result = AddZeroComplication(index, expr)
         if result.minimal_complexity > complexity_budget:
             # If still too complex, try with a simpler expression
-            expr = random_expression(random_stream, 1.0, exclude_unknown=False)
+            expr = random_expression(random_stream, 1.0, exclude_unknown)
             result = AddZeroComplication(index, expr)
 
         return result
