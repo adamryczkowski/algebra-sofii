@@ -43,40 +43,8 @@ def generate_equation_with_complexity(
         return equation
 
     else:
-        # High complexity: use the new sample-style generator
-        from .generators import generate_sample_style_equation
-
-        # For very high complexity, try multiple times to get a good equation
-        max_attempts = 5
-        best_equation = None
-        best_complexity_diff = float("inf")
-
-        for _ in range(max_attempts):
-            try:
-                equation = generate_sample_style_equation(
-                    random_stream, solution, target_complexity
-                )
-                current_complexity = equation.complexity()
-                complexity_diff = abs(current_complexity - target_complexity)
-
-                # Keep the equation closest to our target
-                if complexity_diff < best_complexity_diff:
-                    best_equation = equation
-                    best_complexity_diff = complexity_diff
-
-                # If we're close enough, use it
-                if complexity_diff < target_complexity * 0.3:
-                    break
-
-            except Exception:
-                # If generation fails, try again
-                continue
-
-        # If we got a good equation, return it
-        if best_equation is not None:
-            return best_equation
-
-        # Fallback to the old approach with more complications
+        # High complexity: build equation progressively to match target
+        # Start with a simple base equation
         coeff = random_stream.randint(1, 3)
         constant = random_stream.randint(-3, 3)
 
@@ -92,20 +60,14 @@ def generate_equation_with_complexity(
         current_complexity = base_equation.complexity()
         remaining_complexity = target_complexity - current_complexity
 
-        # Be more aggressive with complications for high targets
-        estimated_complexity_per_complication = 4.0
+        # Estimate complexity per complication more conservatively
+        estimated_complexity_per_complication = 3.0
         num_complications = max(
-            1, int(remaining_complexity / estimated_complexity_per_complication)
+            0, int(remaining_complexity / estimated_complexity_per_complication)
         )
 
-        # For very high complexity targets, add even more complications
-        if target_complexity > 100:
-            num_complications = max(num_complications, int(target_complexity / 15))
-        if target_complexity > 1000:
-            num_complications = max(num_complications, int(target_complexity / 10))
-
-        # Hard cap to prevent infinite recursion
-        num_complications = min(num_complications, 100)
+        # Cap complications to prevent runaway complexity
+        num_complications = min(num_complications, int(target_complexity / 2))
 
         equation = add_simple_complications(
             random_stream, base_equation, num_complications
