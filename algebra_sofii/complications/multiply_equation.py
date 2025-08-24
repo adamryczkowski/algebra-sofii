@@ -62,18 +62,29 @@ class MultiplyEquationComplication(Complication):
         # Generate expression with appropriate complexity
         expr_budget = complexity_budget / 2.0  # Since we duplicate it
 
-        # Ensure we have a reasonable minimum budget for expression generation
-        expr_budget = min(expr_budget, 2.5) if exclude_unknown else expr_budget
+        # Try to generate an expression that fits within budget
+        for _ in range(10):  # Maximum 10 attempts
+            # Always exclude unknown to maintain linearity (override parameter)
+            expr = random_expression(random_stream, expr_budget, exclude_unknown=True)
 
-        # Always exclude unknown to maintain linearity (override parameter)
-        expr = random_expression(random_stream, expr_budget, exclude_unknown=True)
+            # Create the complication and check if it fits within budget
+            result = MultiplyEquationComplication(
+                expr, left_side=random_stream.rand_coinflip(0.5)
+            )
 
-        # Double check that the resulting complication fits within budget
-        result = MultiplyEquationComplication(
-            expr, left_side=random_stream.rand_coinflip(0.5)
+            if result.minimal_complexity <= complexity_budget:
+                return result
+
+            # If too complex, try with a smaller budget
+            expr_budget *= 0.8
+
+        # Fallback: create a simple integer complication that should always fit
+        from ..expressions import Integer
+
+        simple_expr = Integer(random_stream.randint(1, 3))
+        return MultiplyEquationComplication(
+            simple_expr, left_side=random_stream.rand_coinflip(0.5)
         )
-
-        return result
 
     @overrides
     def __repr__(self) -> str:

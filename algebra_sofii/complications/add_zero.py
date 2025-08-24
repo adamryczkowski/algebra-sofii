@@ -72,10 +72,10 @@ class AddZeroComplication(Complication):
 
         # Double check that the resulting complication fits within budget
         result = AddZeroComplication(index, expr)
-        # if result.minimal_complexity > complexity_budget:
-        #     # If still too complex, try with a simpler expression
-        #     expr = random_expression(random_stream, 1.0, exclude_unknown)
-        #     result = AddZeroComplication(index, expr)
+        if result.minimal_complexity > complexity_budget:
+            # If still too complex, try with a simpler expression
+            expr = random_expression(random_stream, 1.0, exclude_unknown)
+            result = AddZeroComplication(index, expr)
 
         return result
 

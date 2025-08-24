@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .base import Complication
-from ..expressions import Expression, Equals
+from ..expressions import Expression, Equals, Integer
 from ..generators import random_expression
 from ..random_class import RandomClass
 from overrides import overrides
@@ -59,22 +59,29 @@ class AddToEquationComplication(Complication):
         if complexity_budget < 2.0:
             raise ValueError("Complexity budget too low for AddToEquationComplication")
 
-        assert exclude_unknown is True
-
         # Generate expression with appropriate complexity
         expr_budget = complexity_budget / 2.0  # Since we duplicate it
 
-        # Ensure we have a reasonable minimum budget for expression generation
-        expr_budget = min(expr_budget, 2.5) if exclude_unknown else expr_budget
+        # Try to generate an expression that fits within budget
+        for _ in range(10):  # Maximum 10 attempts
+            expr = random_expression(random_stream, expr_budget, exclude_unknown)
 
-        expr = random_expression(random_stream, expr_budget, exclude_unknown)
+            # Create the complication and check if it fits within budget
+            complication = AddToEquationComplication(
+                expr, left_side=random_stream.rand_coinflip(0.5)
+            )
 
-        # Double check that the resulting complication fits within budget
-        complication = AddToEquationComplication(
-            expr, left_side=random_stream.rand_coinflip(0.5)
+            if complication.minimal_complexity <= complexity_budget:
+                return complication
+
+            # If too complex, try with a smaller budget
+            expr_budget *= 0.8
+
+        # Fallback: create a simple integer complication that should always fit
+        simple_expr = Integer(random_stream.randint(1, 5))
+        return AddToEquationComplication(
+            simple_expr, left_side=random_stream.rand_coinflip(0.5)
         )
-
-        return complication
 
     @overrides
     def __repr__(self) -> str:

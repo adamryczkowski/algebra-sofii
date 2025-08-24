@@ -365,11 +365,17 @@ class Addition(MathOperator):
 
     @overrides
     def add_expression(self, expr: Expression, left_side: bool) -> Addition:
-        """Override to take advantage of addition associativity."""
-        if left_side:
-            return Addition([expr] + self._operands)
+        """Override to take advantage of addition associativity and flatten nested additions."""
+        if isinstance(expr, Addition):
+            # Flatten nested Addition expressions
+            expr_operands = expr.operands
         else:
-            return Addition(self._operands + [expr])
+            expr_operands = [expr]
+
+        if left_side:
+            return Addition(expr_operands + self._operands)
+        else:
+            return Addition(self._operands + expr_operands)
 
     @overrides
     def __repr__(self):
@@ -453,22 +459,51 @@ class Multiplication(MathOperator):
     def __repr__(self):
         if not self._operands:
             return "1"
-        parts = []
+
+        # Separate regular operands from inverted operands
+        regular_parts = []
+        inverted_parts = []
+
         for operand in self._operands:
-            operand_str = str(operand)
-            # Add parentheses around addition expressions for clarity
-            if isinstance(operand, Addition):
-                operand_str = f"({operand_str})"
-            # Add parentheses around negative integers to avoid ambiguity (e.g., x * (-3) not x * -3)
-            elif isinstance(operand, Integer) and operand.value < 0:
-                operand_str = f"({operand_str})"
-            # Add parentheses around ChangedSign of integers to avoid ambiguity (e.g., x * (-3) not x * -3)
-            elif isinstance(operand, ChangedSign) and isinstance(
-                operand.operand, Integer
-            ):
-                operand_str = f"({operand_str})"
-            parts.append(operand_str)
-        return " * ".join(parts)
+            if isinstance(operand, Inverted):
+                inverted_parts.append(operand.operand)
+            else:
+                operand_str = str(operand)
+                # Add parentheses around addition expressions for clarity
+                if isinstance(operand, Addition):
+                    operand_str = f"({operand_str})"
+                # Add parentheses around negative integers to avoid ambiguity (e.g., x * (-3) not x * -3)
+                elif isinstance(operand, Integer) and operand.value < 0:
+                    operand_str = f"({operand_str})"
+                # Add parentheses around ChangedSign of integers to avoid ambiguity (e.g., x * (-3) not x * -3)
+                elif isinstance(operand, ChangedSign) and isinstance(
+                    operand.operand, Integer
+                ):
+                    operand_str = f"({operand_str})"
+                regular_parts.append(operand_str)
+
+        # Build the representation
+        if not regular_parts:
+            # Only inverted parts
+            if len(inverted_parts) == 1:
+                inv_str = str(inverted_parts[0])
+                if isinstance(inverted_parts[0], (Addition, Multiplication, ChangedSign, Inverted)):
+                    inv_str = f"({inv_str})"
+                return f"1/{inv_str}"
+            else:
+                inv_parts_str = [str(part) for part in inverted_parts]
+                return f"1/({'/'.join(inv_parts_str)})"
+
+        result = "*".join(regular_parts)
+
+        if inverted_parts:
+            for inv_part in inverted_parts:
+                inv_str = str(inv_part)
+                if isinstance(inv_part, (Addition, Multiplication, ChangedSign, Inverted)):
+                    inv_str = f"({inv_str})"
+                result += f"/{inv_str}"
+
+        return result
 
     @overrides
     def inverted(self) -> Expression:

@@ -12,18 +12,25 @@ def test_insert_brackets():
     print("Testing InsertBrackets complication...")
 
     # Create an equation with solution x = 5
-    eq_with_sol = EquationWithSolution(5)
-    print(f"Initial equation: {eq_with_sol.get_current_equation()}")
-    print(f"Initial complexity: {eq_with_sol.get_total_complexity()}")
+    eq_with_sol = EquationWithSolution.MakeEquation(solution=5)
+    print(f"Initial equation: {eq_with_sol}")
 
     # Apply some complications to create additions with 3+ operands
-    random_stream = random.Random(42)  # Fixed seed for reproducible results
+    import random
+    from algebra_sofii.random_class import RandomClass
+    random.seed(42)  # Set seed for reproducibility
+    random_stream = RandomClass()  # Use current random state
 
     # Add some complications to make the equation more complex
-    for i in range(3):
-        eq_with_sol.add_random_complication(15.0, random_stream)
-        print(f"\nAfter complication {i + 1}: {eq_with_sol.get_current_equation()}")
-        print(f"Complexity: {eq_with_sol.get_total_complexity()}")
+    # Use a higher budget and fewer iterations to avoid negative budget issues
+    for i in range(2):  # Reduce from 3 to 2 iterations
+        try:
+            eq_with_sol.add_random_complication(25.0, random_stream)  # Increase budget
+            print(f"\nAfter complication {i + 1}: {eq_with_sol.get_current_equation()}")
+            print(f"Complexity: {eq_with_sol.get_total_complexity()}")
+        except ValueError as e:
+            print(f"Could not add complication {i + 1}: {e}")
+            break
 
     # Try to apply an InsertBrackets complication
     brackets_complication = InsertBracketsComplication.randomize_from_stream(

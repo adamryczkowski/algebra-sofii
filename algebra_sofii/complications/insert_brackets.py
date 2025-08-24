@@ -78,13 +78,60 @@ class InsertBracketsComplication(Complication):
                 "InsertBracketsComplication can only be applied to Addition expressions"
             )
 
-        if len(target_expr.operands) < 3:
+        # Get the operands
+        operands = target_expr.operands
+
+        # Check if we need to flatten AND if flattening would help us reach the required indices
+        if len(operands) < max(self._first_elem, self._second_elem) + 1:
+            # Try flattening nested Addition expressions
+            flattened_operands = []
+            for operand in operands:
+                if isinstance(operand, Addition):
+                    flattened_operands.extend(operand.operands)
+                else:
+                    flattened_operands.append(operand)
+
+            # Only use flattened operands if it gives us enough operands for the requested indices
+            if len(flattened_operands) >= max(self._first_elem, self._second_elem) + 1:
+                operands = flattened_operands
+                # We'll need to update the target expression with flattened structure
+                target_expr = Addition(operands)
+            else:
+                raise ValueError(
+                    f"InsertBracketsComplication: not enough operands to access indices {self._first_elem}, {self._second_elem}"
+                )
+
+        # Check basic requirement for bracket insertion
+        if len(operands) < 2:
+            raise ValueError(
+                "InsertBracketsComplication requires Addition with 2+ operands"
+            )
+
+        # Special case: if we have exactly 2 operands and want to bracket indices 0,1
+        # this is effectively just grouping the existing operands, but we need to force
+        # parentheses to appear around the first operand
+        if len(operands) == 2 and self._first_elem == 0 and self._second_elem == 1:
+            # Create a new Addition that wraps the first operand to force parentheses
+            first_operand = operands[self._first_elem]
+            second_operand = operands[self._second_elem]
+
+            # If the first operand is already an Addition, wrap it in another Addition
+            # to force parentheses to appear in the representation
+            if isinstance(first_operand, Addition):
+                # Create a single-element Addition to force parentheses
+                wrapped_first = Addition([first_operand])
+                new_addition = Addition([wrapped_first, second_operand])
+            else:
+                # For non-Addition operands, just keep the original structure
+                return expr
+
+            return expr.replace_with(self._index, new_addition)
+
+        # Regular case: need at least 3 operands for meaningful bracket insertion
+        if len(operands) < 3:
             raise ValueError(
                 "InsertBracketsComplication requires Addition with 3+ operands"
             )
-
-        # Get the operands
-        operands = target_expr.operands
 
         # Extract the two elements to bracket
         first_operand = operands[self._first_elem]
@@ -106,6 +153,7 @@ class InsertBracketsComplication(Complication):
                 new_operands.append(bracketed_expr)
             else:
                 new_operands.append(op)
+
         new_addition = Addition(new_operands)
         return expr.replace_with(self._index, new_addition)
 
