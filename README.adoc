@@ -1,482 +1,269 @@
-= Algebra Sofii
+= Algebra Sofii - Algebraic Equation Generator
 :toc:
 :toclevels: 3
 
-A Python library for generating algebraic equations suitable for 12-year-old students to practice solving.
+A sophisticated algebraic equation generator designed for 12-year-old students, creating complex yet solvable linear equations through systematic complication algorithms.
 
 == Overview
 
-Algebra Sofii creates random algebraic equations with a single unknown variable that always solve to positive integers between 1 and 9. The library uses a sophisticated expression tree system and complication algorithms to generate equations of varying difficulty while maintaining mathematical correctness.
+Algebra Sofii generates algebraic equations by starting with simple base equations and systematically applying mathematical complications that preserve the solution while increasing complexity. The system uses a complexity budget system to ensure generated equations remain appropriate for the target audience.
 
-== Features
+== Architecture
 
-* **Expression Tree System**: Hierarchical representation of mathematical expressions
-* **Random Generation**: Creates equations with configurable complexity
-* **Solution Preservation**: All generated equations solve to predetermined integer solutions (1-9)
-* **Complication System**: Applies mathematical transformations that preserve solutions while increasing difficulty
-* **SymPy Integration**: Full compatibility with SymPy for symbolic mathematics
-* **Comprehensive Testing**: Extensive test suite with pytest features
+=== Core Components
 
-== Installation
+The system is organized into several key modules:
 
-=== Using Poetry (Recommended)
-
-[source,bash]
-----
-git clone git@github.com:adamryczkowski/algebra-sofii.git
-cd algebra-sofii
-poetry install
-----
-
-=== Using pip with Git
-
-[source,bash]
-----
-pip install git+https://github.com/adamryczkowski/algebra-sofii.git
-----
-
-=== Development Installation
-
-[source,bash]
-----
-git clone git@github.com:adamryczkowski/algebra-sofii.git
-cd algebra-sofii
-poetry install --with dev
-----
-
-== Command-Line Interface
-
-After installation, Algebra Sofii provides a command-line tool for quickly generating algebra equations suitable for student practice.
-
-=== Basic Usage
-
-[source,bash]
-----
-# Generate an equation with default settings
-algebra-equation
-
-# Example output:
-# Generated Algebra Equation:
-# ========================================
-# Equation: 3·x + 7 = 22
-# Solution: x = 5
-# Complexity: 5.0
-# ✓ Solution verified
-----
-
-=== Command Options
-
-The `algebra-equation` command supports the following options:
-
-==== Cost Target (`-c`, `--cost-target`)
-
-Controls the complexity of the generated equation (default: 5.0):
-
-[source,bash]
-----
-# Simple equations (complexity 1-2)
-algebra-equation -c 2.0
-# Output: x = 7
-
-# Medium complexity (complexity 3-4)
-algebra-equation -c 4.0
-# Output: 2·x = 14
-
-# Higher complexity (complexity 5-7)
-algebra-equation -c 6.0
-# Output: 2·x + 5 = 17
-
-# Complex equations (complexity 8+)
-algebra-equation -c 10.0
-# Output: (3·x + 4) + 2 = 2·x + 11
-----
-
-==== Random Seed (`--seed`)
-
-For reproducible results, specify a seed value:
-
-[source,bash]
-----
-# Generate the same equation every time
-algebra-equation --seed 42
-
-# Use different seeds for variety
-algebra-equation --seed 123
-algebra-equation --seed 456
-----
-
-==== Help
-
-[source,bash]
-----
-algebra-equation --help
-----
-
-=== Complexity Levels
-
-The cost-target parameter controls equation difficulty:
-
-* **1-2**: Simple constants or basic linear terms
-  - Examples: `x = 5`, `3·x = 12`
-
-* **3-4**: Linear expressions with coefficients
-  - Examples: `2·x = 8`, `x + 3 = 7`
-
-* **5-7**: Full linear expressions with complications
-  - Examples: `2·x + 3 = 11`, `3·x - 4 = 8`
-
-* **8+**: Complex equations with multiple complications
-  - Examples: `(2·x + 1) + 3 = x + 9`, `2·(x + 3) = 3·x + 1`
-
-=== Examples
-
-[source,bash]
-----
-# Generate 5 practice problems of medium difficulty
-for i in {1..5}; do
-    echo "Problem $i:"
-    algebra-equation -c 5.0 --seed $RANDOM
-    echo
-done
-
-# Create reproducible homework set
-algebra-equation --seed 100 -c 3.0  # Problem 1
-algebra-equation --seed 101 -c 4.0  # Problem 2
-algebra-equation --seed 102 -c 5.0  # Problem 3
-algebra-equation --seed 103 -c 6.0  # Problem 4
-algebra-equation --seed 104 -c 7.0  # Problem 5
-
-# Generate a challenging problem
-algebra-equation -c 12.0 --seed 999
-----
-
-=== Educational Use
-
-The CLI tool is designed for educators and students:
-
-**For Teachers:**
-- Generate homework problems with consistent difficulty
-- Create reproducible problem sets using seeds
-- Scale complexity for different student levels
-
-**For Students:**
-- Practice with randomly generated problems
-- Self-verify solutions with built-in checking
-- Progress from simple to complex equations
-
-**For Parents:**
-- Generate practice problems at home
-- Adjust difficulty based on child's level
-- Solutions are provided for checking work
-
-== Quick Start
-
-=== Basic Usage
-
-[source,python]
-----
-from algebra_sofii import EquationWithSolution
-import random
-
-# Create a random stream for reproducible results
-random_stream = random.Random(42)
-
-# Generate an equation that solves to x = 5
-eq_generator = EquationWithSolution(solution=5)
-
-# Add complications to make it more interesting
-for _ in range(3):
-    complication = eq_generator.random_complication(max_complexity=15.0, random_stream=random_stream)
-    eq_generator.apply_complication(complication)
-
-# Get the final equation
-equation = eq_generator.get_current_equation()
-print(f"Solve: {equation}")
-print(f"Solution: x = {eq_generator.solution}")
-
-# Verify the solution is correct
-print(f"Verification: {eq_generator.verify_solution()}")
-----
-
-=== Working with Expressions
-
-[source,python]
-----
-from algebra_sofii import *
-
-# Create basic expressions
-x = Unknown()
-five = Integer(5)
-two = Integer(2)
-
-# Build complex expressions
-linear_expr = Addition([Multiplication([two, x]), five])  # 2*x + 5
-equation = Equals(linear_expr, Integer(15))  # 2*x + 5 = 15
-
-# Evaluate expressions
-result = linear_expr.evaluate(3)  # Evaluates 2*3 + 5 = 11
-print(f"2*x + 5 where x=3: {result}")
-
-# Convert to SymPy
-sympy_expr = equation.to_sympy_expr()
-print(f"SymPy equation: {sympy_expr}")
-----
-
-== Core Concepts
-
-=== Expression Hierarchy
-
-The library uses a tree-based representation of mathematical expressions:
-
-* **`Expression`**: Base class for all mathematical expressions
-* **`Integer`**: Represents integer constants
-* **`Unknown`**: Represents variables (typically 'x')
-* **`Addition`**: Represents sum of multiple expressions
-* **`Multiplication`**: Represents product of multiple expressions
-* **`ChangedSign`**: Represents negation of an expression
-* **`Inverted`**: Represents reciprocal (1/x) of an expression
-* **`Equals`**: Represents equations with left and right sides
-
-=== Expression Operations
-
-All expressions support these operations:
-
-[source,python]
-----
-expr = Integer(5)
-
-# Basic transformations
-negated = expr.negated()        # -5
-inverted = expr.inverted()      # 1/5
-added = expr.add_expression(Integer(3))     # 5 + 3
-multiplied = expr.multiply_by(Integer(2))   # 5 * 2
-
-# Complex transformations that preserve value
-add_zero = expr.add_zero(Integer(7))        # 7 + (5 - 7) = 5
-mult_one = expr.multiply_by_one(Integer(3)) # 3 * (5 / 3) = 5
-----
-
-=== Complication System
-
-The complication system applies mathematical transformations that preserve equation solutions while increasing complexity:
-
-* **`ExpressionComplication`**: Modifies subexpressions using add-zero or multiply-by-one
-* **`EquationComplication`**: Applies operations to both sides of equations
-* **`EquationElementMove`**: Moves terms between equation sides
-
-=== Random Generation
-
-[source,python]
-----
-from algebra_sofii import random_expression, random_nonzero_expression
-
-# Generate expressions with target complexity
-simple_expr = random_expression(random_stream, complexity_target=2.0)
-complex_expr = random_expression(random_stream, complexity_target=5.0)
-
-# Generate expressions that don't evaluate to zero
-nonzero_expr = random_nonzero_expression(random_stream, complexity_target=3.0, true_x=4)
-----
-
-== Advanced Usage
-
-=== Custom Expression Building
-
-[source,python]
-----
-# Build: (2*x + 3) = (x + 8)
-left_side = Addition([
-    Multiplication([Integer(2), Unknown('x')]),
-    Integer(3)
-])
-right_side = Addition([Unknown('x'), Integer(8)])
-equation = Equals(left_side, right_side)
-
-print(f"Equation: {equation}")
-print(f"Solution check (x=5): {equation.left.evaluate(5)} = {equation.right.evaluate(5)}")
-----
-
-=== Controlled Complication Generation
-
-[source,python]
-----
-from algebra_sofii.complications import *
-
-# Create specific complications
-expr_comp = ExpressionComplication(
-    index=ExpressionIndex([0]),  # Target first operand
-    operation=OperationType.ADD_ZERO,
-    expr=Integer(4)
-)
-
-eq_comp = EquationComplication(
-    operation=OperationType.MULTIPLY,
-    expr=Integer(3)
-)
-
-# Apply to equations
-equation = Equals(Unknown(), Integer(7))
-complicated = expr_comp.apply(equation)
-more_complicated = eq_comp.apply(complicated)
-----
-
-=== Expression Navigation
-
-[source,python]
-----
-# Navigate expression trees using indices
-complex_expr = Addition([
-    Multiplication([Integer(2), Unknown('x')]),
-    ChangedSign(Integer(3))
-])
-
-# Access subexpressions
-coefficient = complex_expr[ExpressionIndex([0, 0])]  # Gets the '2'
-variable = complex_expr[ExpressionIndex([0, 1])]     # Gets the 'x'
-constant = complex_expr[ExpressionIndex([1, 0])]     # Gets the '3' inside ChangedSign
-
-# Replace subexpressions
-new_expr = complex_expr.replace_with(
-    ExpressionIndex([0, 0]),
-    Integer(5)
-)  # Changes coefficient from 2 to 5
-----
-
-== API Reference
-
-=== Core Classes
-
-==== Expression
-Base class for all mathematical expressions.
-
-**Methods:**
-- `to_sympy_expr() -> sympy.Expr`: Convert to SymPy expression
-- `evaluate(true_x: int) -> Rational`: Evaluate with given x value
-- `complexity() -> float`: Get complexity measure
-- `negated() -> Expression`: Return negated expression
-- `inverted() -> Expression`: Return inverted expression (1/expr)
-
-==== EquationWithSolution
-Container for equations with predetermined solutions.
-
-**Methods:**
-- `random_complication(max_complexity: float) -> Complication`: Generate random complication
-- `apply_complication(complication: Complication)`: Apply a complication
-- `get_current_equation() -> Expression`: Get current equation form
-- `verify_solution() -> bool`: Verify equation still solves correctly
-
-=== Generator Functions
-
-==== random_expression(random_stream, complexity_target: float) -> Expression
-Generate random algebraic expressions.
-
-**Parameters:**
-- `random_stream`: Random number generator
-- `complexity_target`: Target complexity level
-
-**Returns:**
-Expression in form of constants, linear terms, or full linear expressions.
-
-==== random_nonzero_expression(random_stream, complexity_target: float, true_x: int) -> Expression
-Generate expressions that don't evaluate to zero.
-
-== Development
-
-=== Running Tests
-
-[source,bash]
-----
-# Run all tests
-poetry run pytest
-
-# Run with coverage
-poetry run pytest --cov=algebra_sofii
-
-# Run specific test file
-poetry run pytest tests/test_expressions.py
-
-# Run with verbose output
-poetry run pytest -v
-----
-
-=== Project Structure
-
+[source]
 ----
 algebra_sofii/
-├── __init__.py           # Package initialization
-├── expressions.py       # Expression class hierarchy
-├── generators.py        # Random expression generators
-└── complications.py     # Complication system
-
-tests/
-├── conftest.py          # Test configuration and fixtures
-├── test_expressions.py  # Expression system tests
-├── test_generators.py   # Generator function tests
-└── test_complications.py # Complication system tests
+├── expressions.py          # Expression tree classes (Addition, Multiplication, etc.)
+├── generators.py           # Random expression generation utilities
+├── cli.py                  # Command-line interface
+└── complications/          # Complication system (detailed below)
+    ├── base.py             # Abstract Complication base class
+    ├── config.py           # Weight configurations and class mappings
+    ├── equation_with_solution.py  # Main equation container
+    ├── add_zero.py         # Add-zero complication
+    ├── multiply_by_one.py  # Multiply-by-one complication
+    ├── insert_brackets.py  # Bracket insertion complication
+    ├── negate.py           # Negation complication
+    ├── invert.py           # Inversion complication
+    ├── add_to_equation.py  # Add-to-both-sides complication
+    └── multiply_equation.py # Multiply-both-sides complication
 ----
 
-== Examples
+=== Expression System
 
-=== Generate Simple Practice Problems
+The expression system uses a tree structure to represent algebraic expressions:
+
+* **Base Types**: `Integer`, `Unknown` (representing variables like 'x')
+* **Operations**: `Addition`, `Multiplication`, `Equals`
+* **Modifiers**: `ChangedSign` (negation), `Inverted` (reciprocal)
+* **Indexing**: `ExpressionIndex` for navigating expression trees
+
+Each expression has a `complexity()` method that returns a numerical complexity score used for budget management.
+
+== Complication System
+
+=== Algorithm Overview
+
+The core algorithm works as follows:
+
+1. **Start** with a simple base equation (e.g., `x = 5`)
+2. **Select** complications randomly based on weighted probabilities
+3. **Apply** complications that preserve mathematical equivalence
+4. **Track** complexity to stay within budget limits
+5. **Repeat** until target complexity is reached
+
+=== Complication Types
+
+==== Expression Complications
+
+These complications modify subexpressions within equations:
+
+**AddZeroComplication**::
+Replaces `expr` with `zero_expr + (expr - zero_expr)`, mathematically equivalent to adding zero.
++
+_Minimal complexity_: `zero_expr.complexity() + 2.0`
++
+_Example_: `x` → `3 + (x + (-3))`
+
+**MultiplyByOneComplication**::
+Replaces `expr` with `one_expr * (expr / one_expr)`, mathematically equivalent to multiplying by one.
++
+_Minimal complexity_: `one_expr.complexity() + 2.0`
++
+_Example_: `x` → `2 * (x / 2)`
+
+**InsertBracketsComplication**::
+Groups two operands in additions with 3+ terms, optionally with negation.
++
+_Minimal complexity_: `1.0` (or `2.0` with negation)
++
+_Example_: `a + b + c` → `(a + b) + c` or `-(a + b) + c`
+
+**NegateComplication**::
+Wraps an expression with a sign change.
++
+_Minimal complexity_: `1.0`
++
+_Example_: `x + 2` → `-(x + 2)`
+
+**InvertComplication**::
+Wraps an expression with reciprocal operation.
++
+_Minimal complexity_: `1.0`
++
+_Example_: `x + 2` → `1/(x + 2)`
+
+==== Equation Complications
+
+These complications operate on both sides of equations:
+
+**AddToEquationComplication**::
+Adds the same expression to both sides of an equation.
++
+_Minimal complexity_: `2 * expr.complexity()`
++
+_Example_: `x = 5` → `x + 3 = 5 + 3`
+
+**MultiplyEquationComplication**::
+Multiplies both sides of an equation by the same expression.
++
+_Minimal complexity_: `2 * expr.complexity()`
++
+_Example_: `x = 5` → `2x = 10`
+
+=== Complexity Budget System
+
+Each complication has:
+
+* **Minimal Complexity**: The minimum complexity it will add
+* **Maximal Complexity**: The maximum complexity it can add
+* **Budget Checking**: Ensures complications fit within remaining budget
+
+The system uses a two-step validation:
+1. **Theoretical Check**: Verify minimal complexity fits budget
+2. **Actual Check**: Validate generated complication complexity
+
+=== Weighted Selection Algorithm
+
+Complications are selected using weighted random choice:
 
 [source,python]
 ----
-import random
-from algebra_sofii import EquationWithSolution
+EXPRESSION_COMPLICATION_WEIGHTS = {
+    'AddZeroComplication': 2.0,
+    'MultiplyByOneComplication': 2.0,
+    'InsertBracketsComplication': 3.0,  # Higher weight - often applicable
+    'NegateComplication': 1.0,
+    'InvertComplication': 0.5,  # Lower weight - can cause division issues
+}
 
-def generate_practice_problems(count=5, difficulty="medium"):
-    """Generate practice problems for students."""
-    random_stream = random.Random()
-    problems = []
-
-    complexity_map = {
-        "easy": 5.0,
-        "medium": 10.0,
-        "hard": 15.0
-    }
-    max_complexity = complexity_map.get(difficulty, 10.0)
-
-    for i in range(count):
-        solution = random_stream.randint(1, 9)
-        eq_gen = EquationWithSolution(solution)
-
-        # Add 2-4 complications
-        num_complications = random_stream.randint(2, 4)
-        for _ in range(num_complications):
-            if eq_gen.get_total_complexity() < max_complexity:
-                comp = eq_gen.random_complication(max_complexity, random_stream)
-                eq_gen.apply_complication(comp)
-
-        problems.append({
-            'equation': str(eq_gen.get_current_equation()),
-            'solution': solution,
-            'complexity': eq_gen.get_total_complexity()
-        })
-
-    return problems
-
-# Generate problems
-problems = generate_practice_problems(count=3, difficulty="medium")
-for i, problem in enumerate(problems, 1):
-    print(f"Problem {i}: {problem['equation']}")
-    print(f"Solution: x = {problem['solution']}")
-    print(f"Complexity: {problem['complexity']:.1f}")
-    print()
+EQUATION_COMPLICATION_WEIGHTS = {
+    # All expression complications plus:
+    'AddToEquationComplication': 2.5,
+    'MultiplyEquationComplication': 1.5,
+}
 ----
+
+== Main Algorithm: EquationWithSolution
+
+=== Core Methods
+
+**`add_random_complication(max_complexity, random_stream)`**::
+1. Calculate remaining complexity budget
+2. Filter applicable complications by minimal complexity
+3. Select complication using weighted random choice
+4. Generate complication instance with budget constraints
+5. Apply complication and update cached form
+
+**`randomize(random_stream, max_complexity)`**::
+Repeatedly calls `add_random_complication()` until target complexity is reached or no more complications can be applied.
+
+=== Static Factory Pattern
+
+Each complication implements:
+
+[source,python]
+----
+@staticmethod
+def randomize_from_stream(random_stream, base_expression, complexity_budget):
+    # Check budget feasibility
+    if complexity_budget < minimal_complexity:
+        return None
+
+    # Generate sub-expressions within budget
+    # Create complication instance
+    # Validate final complexity
+    # Return complication or fallback to simpler version
+----
+
+== Usage Examples
+
+=== Basic Usage
+
+[source,python]
+----
+from algebra_sofii import EquationWithSolution
+import random
+
+# Create equation: x = 5
+eq = EquationWithSolution(solution=5)
+
+# Add complications up to complexity 15
+random_stream = random.Random(42)  # For reproducibility
+eq.randomize(random_stream, max_complexity=15.0)
+
+# Get the complicated equation
+current_equation = eq.get_current_equation()
+print(current_equation)  # e.g., "2 * (3 + (x + (-3))) / 2 + 1 = 6"
+
+# Verify solution is preserved
+assert eq.verify_solution()  # Should be True
+----
+
+=== Custom Complication Application
+
+[source,python]
+----
+from algebra_sofii.complications import AddZeroComplication
+from algebra_sofii.expressions import ExpressionIndex, Integer
+
+# Apply specific complication
+index = ExpressionIndex([0])  # Target left side
+zero_expr = Integer(7)
+complication = AddZeroComplication(index, zero_expr)
+
+eq = EquationWithSolution(solution=10)
+eq.apply_complication(complication)
+# Result: 7 + (x + (-7)) = 10
+----
+
+== Design Principles
+
+=== Mathematical Equivalence
+All complications preserve the mathematical truth of equations. The original solution remains valid after any sequence of complications.
+
+=== Complexity Management
+The complexity budget system ensures generated equations remain appropriate for the target difficulty level while allowing fine-grained control.
+
+=== Extensibility
+The complication system is designed for easy extension. New complication types can be added by:
+
+1. Implementing the `Complication` interface
+2. Adding to weight configurations
+3. Including in class mappings
+
+=== Deterministic Generation
+Given the same random seed, the system produces identical results, enabling reproducible test generation.
+
+== Testing
+
+The system includes comprehensive tests:
+
+* **Unit tests** for each complication class
+* **Integration tests** for the equation generation system
+* **Complexity budget validation**
+* **Mathematical equivalence verification**
+
+Run tests with:
+[source,bash]
+----
+pytest tests/
+----
+
+== Future Extensions
+
+The architecture supports several potential extensions:
+
+* **Non-linear complications** (quadratic terms, etc.)
+* **Multi-variable equations**
+* **System of equations**
+* **Custom difficulty curves**
+* **Educational scaffolding**
 
 == License
 
-[Include your license information here]
-
-== Contributing
-
-[Include contribution guidelines here]
-
-== Changelog
-
-=== Version 0.1.0
-- Initial release
-- Core expression system
-- Random generation algorithms
-- Complication system
-- Comprehensive test suite
+[Include license information here]

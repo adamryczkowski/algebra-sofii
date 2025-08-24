@@ -4,10 +4,16 @@ Algebra equation generator for 12-year-old students.
 
 from .complications import (
     Complication,
-    EquationComplication,
-    EquationElementMove,
+    AddZeroComplication,
+    MultiplyByOneComplication,
+    InsertBracketsComplication,
+    NegateComplication,
+    InvertComplication,
+    AddToEquationComplication,
+    MultiplyEquationComplication,
     EquationWithSolution,
-    ExpressionComplication,
+    EXPRESSION_COMPLICATION_WEIGHTS,
+    EQUATION_COMPLICATION_WEIGHTS,
 )
 from .expressions import (
     Addition,
@@ -20,24 +26,31 @@ from .expressions import (
     Multiplication,
     Unknown,
 )
-from .generators import random_expression, random_nonzero_expression
+from .generators import random_expression
 
-__version__ = "0.1.0"
 __all__ = [
-    "Expression",
-    "Integer",
-    "Unknown",
-    "Addition",
-    "Multiplication",
-    "ChangedSign",
-    "Inverted",
-    "Equals",
-    "ExpressionIndex",
-    "random_expression",
-    "random_nonzero_expression",
+    # Complications
     "Complication",
-    "ExpressionComplication",
-    "EquationComplication",
-    "EquationElementMove",
+    "AddZeroComplication",
+    "MultiplyByOneComplication",
+    "InsertBracketsComplication",
+    "NegateComplication",
+    "InvertComplication",
+    "AddToEquationComplication",
+    "MultiplyEquationComplication",
     "EquationWithSolution",
+    "EXPRESSION_COMPLICATION_WEIGHTS",
+    "EQUATION_COMPLICATION_WEIGHTS",
+    # Expressions
+    "Addition",
+    "ChangedSign",
+    "Equals",
+    "Expression",
+    "ExpressionIndex",
+    "Integer",
+    "Inverted",
+    "Multiplication",
+    "Unknown",
+    # Generators
+    "random_expression",
 ]

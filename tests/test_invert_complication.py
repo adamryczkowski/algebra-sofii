@@ -1,75 +1,75 @@
-"""Tests for NegateComplication class."""
+"""Tests for InvertComplication class."""
 
 import random
 import pytest
-from algebra_sofii.complications import NegateComplication
+from algebra_sofii.complications import InvertComplication
 from algebra_sofii.expressions import Integer, Unknown, ExpressionIndex, Equals
 
 
-def test_negate_complication_init():
-    """Test NegateComplication initialization."""
+def test_invert_complication_init():
+    """Test InvertComplication initialization."""
     index = ExpressionIndex([0])
-    complication = NegateComplication(index)
+    complication = InvertComplication(index)
 
     assert complication.index == index
 
 
-def test_negate_complication_minimal_complexity():
+def test_invert_complication_minimal_complexity():
     """Test that minimal_complexity returns expected value."""
     index = ExpressionIndex([0])
-    complication = NegateComplication(index)
+    complication = InvertComplication(index)
 
-    # Negate wraps expression in ChangedSign, adding 1.0 complexity
+    # Invert wraps expression in Inverted, adding 1.0 complexity
     assert complication.minimal_complexity == 1.0
 
 
-def test_negate_complication_maximal_complexity():
+def test_invert_complication_maximal_complexity():
     """Test that maximal_complexity returns expected value."""
     index = ExpressionIndex([0])
-    complication = NegateComplication(index)
+    complication = InvertComplication(index)
 
-    # For Negate, max is same as min since complexity is deterministic
+    # For Invert, max is same as min since complexity is deterministic
     assert complication.maximal_complexity == 1.0
 
 
-def test_negate_complication_apply():
-    """Test applying NegateComplication to an expression."""
+def test_invert_complication_apply():
+    """Test applying InvertComplication to an expression."""
     index = ExpressionIndex([0])  # Target left side of equation
-    complication = NegateComplication(index)
+    complication = InvertComplication(index)
 
     # Apply to x = 5 (use equation instead of just Unknown)
     original = Equals(Unknown(), Integer(5))
     result = complication.apply(original)
 
-    # Should create: -x = 5
+    # Should create: 1/x = 5
     assert isinstance(result, Equals)
-    from algebra_sofii.expressions import ChangedSign
+    from algebra_sofii.expressions import Inverted
 
-    assert isinstance(result.left, ChangedSign)
+    assert isinstance(result.left, Inverted)
     assert result.left.operand == Unknown()
 
 
-def test_negate_complication_randomize_from_stream():
+def test_invert_complication_randomize_from_stream():
     """Test static factory method for random generation."""
     random_stream = random.Random(42)
-    base_expr = Unknown()
+    base_expr = Integer(5)  # Use non-zero integer to avoid division by zero
     complexity_budget = 2.0
 
-    complication = NegateComplication.randomize_from_stream(
+    complication = InvertComplication.randomize_from_stream(
         random_stream, base_expr, complexity_budget
     )
 
-    assert isinstance(complication, NegateComplication)
+    assert isinstance(complication, InvertComplication)
     assert complication.minimal_complexity <= complexity_budget
 
 
-def test_negate_complication_randomize_insufficient_budget():
+def test_invert_complication_randomize_insufficient_budget():
     """Test randomize_from_stream with insufficient complexity budget."""
     random_stream = random.Random(42)
-    base_expr = Unknown()
+    base_expr = Integer(5)
     complexity_budget = 0.5  # Less than minimal_complexity of 1.0
 
-    result = NegateComplication.randomize_from_stream(
+    result = InvertComplication.randomize_from_stream(
         random_stream, base_expr, complexity_budget
     )
 
@@ -78,12 +78,12 @@ def test_negate_complication_randomize_insufficient_budget():
 
 
 @pytest.mark.parametrize("complexity_budget", [1.0, 2.0, 3.0, 5.0])
-def test_negate_complication_respects_complexity_budget(complexity_budget):
+def test_invert_complication_respects_complexity_budget(complexity_budget):
     """Test that generated complications respect complexity budget."""
     random_stream = random.Random(42)
-    base_expr = Unknown()
+    base_expr = Integer(5)
 
-    complication = NegateComplication.randomize_from_stream(
+    complication = InvertComplication.randomize_from_stream(
         random_stream, base_expr, complexity_budget
     )
 
