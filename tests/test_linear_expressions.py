@@ -2,14 +2,14 @@
 Pytest unit tests for testing linear expressions with high complexity.
 """
 
-import random
 import pytest
 from algebra_sofii.generators import random_expression
+from algebra_sofii import RandomClass
 
 
 def test_high_complexity_linear_expressions():
     """Test that random expressions with high complexity target have maximum power of unknown = 1."""
-    random_stream = random.Random(42)
+    random_stream = RandomClass.FromFixedSeed(42)
 
     # Test with complexity target of 200 as requested
     complexity_target = 200.0
@@ -25,7 +25,7 @@ def test_high_complexity_linear_expressions():
 
 def test_various_complexity_targets():
     """Test linear expressions with various high complexity targets."""
-    random_stream = random.Random(123)
+    random_stream = RandomClass.FromFixedSeed(123)
 
     # Test different high complexity values
     complexity_targets = [100.0, 150.0, 200.0, 250.0, 300.0]

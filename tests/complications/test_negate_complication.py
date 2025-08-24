@@ -1,9 +1,9 @@
 """Tests for NegateComplication class."""
 
-import random
 import pytest
 from algebra_sofii.complications import NegateComplication
 from algebra_sofii.expressions import Integer, Unknown, ExpressionIndex, Equals
+from algebra_sofii import RandomClass
 
 
 def test_negate_complication_init():
@@ -52,7 +52,7 @@ def test_negate_complication_apply():
 
 def test_negate_complication_randomize_from_stream():
     """Test static factory method for random generation."""
-    random_stream = random.Random(42)
+    random_stream = RandomClass.FromFixedSeed(42)
     base_expr = Unknown()
     complexity_budget = 2.0
 
@@ -66,7 +66,7 @@ def test_negate_complication_randomize_from_stream():
 
 def test_negate_complication_randomize_insufficient_budget():
     """Test randomize_from_stream with insufficient complexity budget."""
-    random_stream = random.Random(42)
+    random_stream = RandomClass.FromFixedSeed(42)
     base_expr = Unknown()
     complexity_budget = 1.5  # Less than minimal_complexity of 2.0
 
@@ -81,7 +81,7 @@ def test_negate_complication_randomize_insufficient_budget():
 @pytest.mark.parametrize("complexity_budget", [2.0, 3.0, 5.0])
 def test_negate_complication_respects_complexity_budget(complexity_budget):
     """Test that generated complications respect complexity budget."""
-    random_stream = random.Random(42)
+    random_stream = RandomClass.FromFixedSeed(42)
     base_expr = Unknown()
 
     complication = NegateComplication.randomize_from_stream(

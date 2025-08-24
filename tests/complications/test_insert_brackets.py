@@ -16,8 +16,8 @@ def test_insert_brackets():
     print(f"Initial equation: {eq_with_sol}")
 
     # Apply some complications to create additions with 3+ operands
-    import random
     from algebra_sofii.random_class import RandomClass
+
     random.seed(42)  # Set seed for reproducibility
     random_stream = RandomClass()  # Use current random state
 

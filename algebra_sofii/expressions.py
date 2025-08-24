@@ -460,13 +460,47 @@ class Multiplication(MathOperator):
         if not self._operands:
             return "1"
 
-        # Separate regular operands from inverted operands
+        # Check if we have exactly one inverted operand and one regular operand
+        # In that case, we might want to show as multiplication with 1/x format
+        if len(self._operands) == 2:
+            regular_ops = [op for op in self._operands if not isinstance(op, Inverted)]
+            inverted_ops = [op for op in self._operands if isinstance(op, Inverted)]
+
+            if len(regular_ops) == 1 and len(inverted_ops) == 1:
+                # Show as explicit multiplication, preserving order
+                parts = []
+                for operand in self._operands:
+                    if isinstance(operand, Inverted):
+                        inverted_str = str(operand)  # This will give us "1/x" format
+                        parts.append(inverted_str)
+                    else:
+                        operand_str = str(operand)
+                        if isinstance(operand, Addition):
+                            operand_str = f"({operand_str})"
+                        elif isinstance(operand, Integer) and operand.value < 0:
+                            operand_str = f"({operand_str})"
+                        elif isinstance(operand, ChangedSign) and isinstance(
+                            operand.operand, Integer
+                        ):
+                            operand_str = f"({operand_str})"
+                        parts.append(operand_str)
+
+                return " * ".join(parts)
+
+        # Separate regular operands from inverted ones for general case
         regular_parts = []
         inverted_parts = []
 
         for operand in self._operands:
             if isinstance(operand, Inverted):
-                inverted_parts.append(operand.operand)
+                # For inverted operands, we'll show as division
+                operand_str = str(operand.operand)
+                # Add parentheses around complex expressions in denominator
+                if isinstance(
+                    operand.operand, (Addition, Multiplication, ChangedSign, Inverted)
+                ):
+                    operand_str = f"({operand_str})"
+                inverted_parts.append(operand_str)
             else:
                 operand_str = str(operand)
                 # Add parentheses around addition expressions for clarity
@@ -482,26 +516,15 @@ class Multiplication(MathOperator):
                     operand_str = f"({operand_str})"
                 regular_parts.append(operand_str)
 
-        # Build the representation
-        if not regular_parts:
-            # Only inverted parts
-            if len(inverted_parts) == 1:
-                inv_str = str(inverted_parts[0])
-                if isinstance(inverted_parts[0], (Addition, Multiplication, ChangedSign, Inverted)):
-                    inv_str = f"({inv_str})"
-                return f"1/{inv_str}"
-            else:
-                inv_parts_str = [str(part) for part in inverted_parts]
-                return f"1/({'/'.join(inv_parts_str)})"
+        # Build the result
+        if regular_parts:
+            result = " * ".join(regular_parts)
+        else:
+            result = "1"
 
-        result = "*".join(regular_parts)
-
-        if inverted_parts:
-            for inv_part in inverted_parts:
-                inv_str = str(inv_part)
-                if isinstance(inv_part, (Addition, Multiplication, ChangedSign, Inverted)):
-                    inv_str = f"({inv_str})"
-                result += f"/{inv_str}"
+        # Add division parts
+        for inv_part in inverted_parts:
+            result = f"{result}/{inv_part}"
 
         return result
 
@@ -834,3 +857,70 @@ class Equals(Expression):
     @overrides
     def __repr__(self):
         return f"{self._left} = {self._right}"
+
+
+class ParenthesizedExpression(Expression):
+    """Wrapper that forces parentheses around an expression in string representation."""
+
+    _operand: Expression
+
+    def __init__(self, operand: Expression):
+        self._operand = operand
+
+    @property
+    def operand(self) -> Expression:
+        """The wrapped operand."""
+        return self._operand
+
+    @overrides
+    def maximum_power_of_unknown(self) -> int:
+        """Return the same power as the operand."""
+        return self._operand.maximum_power_of_unknown()
+
+    @overrides
+    def to_sympy_expr(self) -> sp.Expr:
+        return self._operand.to_sympy_expr()
+
+    @overrides
+    def random_subexpression(self, random_stream: RandomClass) -> ExpressionIndex:
+        sub_index = self._operand.random_subexpression(random_stream)
+        return ExpressionIndex([0] + sub_index.indices)
+
+    @overrides
+    def __getitem__(self, index: ExpressionIndex) -> Expression:
+        if not index.indices:
+            return self
+        if index.indices[0] == 0:
+            remaining_index = ExpressionIndex(index.indices[1:])
+            return self._operand[remaining_index]
+        raise IndexError("ParenthesizedExpression has only one operand at index 0")
+
+    @overrides
+    def complexity(self) -> float:
+        return self._operand.complexity()
+
+    @overrides
+    def replace_with(self, index: ExpressionIndex, expr: Expression) -> Expression:
+        if not index.indices:
+            return expr
+        if index.indices[0] == 0:
+            remaining_index = ExpressionIndex(index.indices[1:])
+            new_operand = self._operand.replace_with(remaining_index, expr)
+            return ParenthesizedExpression(new_operand)
+        raise IndexError("ParenthesizedExpression has only one operand at index 0")
+
+    @overrides
+    def negated(self) -> Expression:
+        """Negate the wrapped operand and keep parentheses."""
+        return ParenthesizedExpression(self._operand.negated())
+
+    @overrides
+    def __repr__(self):
+        return f"({self._operand})"
+
+    @overrides
+    def __eq__(self, other):
+        return (
+            isinstance(other, ParenthesizedExpression)
+            and self._operand == other.operand
+        )

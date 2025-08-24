@@ -108,25 +108,37 @@ class InsertBracketsComplication(Complication):
             )
 
         # Special case: if we have exactly 2 operands and want to bracket indices 0,1
-        # this is effectively just grouping the existing operands, but we need to force
-        # parentheses to appear around the first operand
+        # this means we want to add parentheses around the entire expression
+        # But since we're targeting specific indices, we need to be more careful
         if len(operands) == 2 and self._first_elem == 0 and self._second_elem == 1:
-            # Create a new Addition that wraps the first operand to force parentheses
+            # This case means we want to bracket both operands together
+            # which doesn't make much sense for a 2-operand addition
+            # The test seems to expect (x - 1) + something, which suggests
+            # the intent is to add parentheses around just the first operand
+
+            # Let's check if this is really a request to bracket just the first operand
+            # by creating a structure that forces parentheses around it
             first_operand = operands[self._first_elem]
             second_operand = operands[self._second_elem]
 
-            # If the first operand is already an Addition, wrap it in another Addition
-            # to force parentheses to appear in the representation
             if isinstance(first_operand, Addition):
-                # Create a single-element Addition to force parentheses
-                wrapped_first = Addition([first_operand])
-                new_addition = Addition([wrapped_first, second_operand])
+                # Use the new ParenthesizedExpression to force parentheses around the first operand
+                from ..expressions import ParenthesizedExpression
+
+                parenthesized_first = ParenthesizedExpression(first_operand)
+
+                if self._negate:
+                    # Apply negation to the parenthesized expression
+                    bracketed_expr = ChangedSign(parenthesized_first)
+                    new_addition = Addition([bracketed_expr, second_operand])
+                else:
+                    # Create new addition with parenthesized first operand
+                    new_addition = Addition([parenthesized_first, second_operand])
+
+                return expr.replace_with(self._index, new_addition)
             else:
-                # For non-Addition operands, just keep the original structure
+                # For non-Addition operands, we don't need special parentheses handling
                 return expr
-
-            return expr.replace_with(self._index, new_addition)
-
         # Regular case: need at least 3 operands for meaningful bracket insertion
         if len(operands) < 3:
             raise ValueError(

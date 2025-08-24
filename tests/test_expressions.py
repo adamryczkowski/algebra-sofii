@@ -131,7 +131,7 @@ class TestAddition:
     def test_add_expression_optimization(self):
         """Test that adding to addition optimizes by extending operands."""
         original = Addition([Integer(1), Integer(2)])
-        result = original.add_expression(Integer(3))
+        result = original.add_expression(Integer(3), left_side=False)
 
         assert len(result.operands) == 3
         assert all(isinstance(op, Integer) for op in result.operands)
@@ -182,7 +182,7 @@ class TestMultiplication:
     def test_multiply_by_optimization(self):
         """Test that multiplying extends operands."""
         original = Multiplication([Integer(2), Unknown()])
-        result = original.multiply_by(Integer(3))
+        result = original.multiply_by(Integer(3), left_side=False)
 
         assert len(result.operands) == 3
 
@@ -278,7 +278,7 @@ class TestEquals:
     def test_multiply_sides_by(self, sample_equation):
         """Test multiplying both sides by an expression."""
         multiplier = Integer(3)
-        result = sample_equation.multiply_sides_by(multiplier)
+        result = sample_equation.multiply_sides_by(multiplier, left_side=False)
 
         assert isinstance(result, Equals)
         assert isinstance(result.left, Multiplication)
@@ -287,7 +287,7 @@ class TestEquals:
     def test_add_to_sides(self, sample_equation):
         """Test adding to both sides of equation."""
         addend = Integer(2)
-        result = sample_equation.add_to_sides(addend)
+        result = sample_equation.add_to_sides(addend, left_side=False)
 
         assert isinstance(result, Equals)
         assert isinstance(result.left, Addition)

@@ -2,16 +2,17 @@
 Command-line interface for algebra equation generator.
 """
 
-import random
 from typing import Optional
 
 import click
 
 from .expressions import Equals, Integer, Unknown, Addition, Multiplication
+from .generators import random_expression
+from .random_class import RandomClass
 
 
 def generate_equation_with_complexity(
-    random_stream: random.Random, solution: int, target_complexity: float
+    random_stream: RandomClass, solution: int, target_complexity: float
 ) -> Equals:
     """Generate an equation with approximately the target complexity."""
 
@@ -42,8 +43,40 @@ def generate_equation_with_complexity(
         return equation
 
     else:
-        # High complexity: multiple complications
-        # Start with a simple base equation to avoid recursion
+        # High complexity: use the new sample-style generator
+        from .generators import generate_sample_style_equation
+
+        # For very high complexity, try multiple times to get a good equation
+        max_attempts = 5
+        best_equation = None
+        best_complexity_diff = float("inf")
+
+        for _ in range(max_attempts):
+            try:
+                equation = generate_sample_style_equation(
+                    random_stream, solution, target_complexity
+                )
+                current_complexity = equation.complexity()
+                complexity_diff = abs(current_complexity - target_complexity)
+
+                # Keep the equation closest to our target
+                if complexity_diff < best_complexity_diff:
+                    best_equation = equation
+                    best_complexity_diff = complexity_diff
+
+                # If we're close enough, use it
+                if complexity_diff < target_complexity * 0.3:
+                    break
+
+            except Exception:
+                # If generation fails, try again
+                continue
+
+        # If we got a good equation, return it
+        if best_equation is not None:
+            return best_equation
+
+        # Fallback to the old approach with more complications
         coeff = random_stream.randint(1, 3)
         constant = random_stream.randint(-3, 3)
 
@@ -81,50 +114,47 @@ def generate_equation_with_complexity(
         return equation
 
 
-# def add_simple_complications(
-#     random_stream: random.Random, equation: Equals, num_complications: int
-# ) -> Equals:
-#     """Add simple complications to an equation."""
-#     current_equation = equation
-#
-#     for _ in range(num_complications):
-#         # Choose a random complication type with proper weights
-#         # Give NEGATE a higher probability to reach the expected 30-70% range
-#         complication_types = [
-#             OperationType.ADD_ZERO,
-#             OperationType.MULTIPLY_BY_ONE,
-#             OperationType.NEGATE,
-#             OperationType.NEGATE,  # Include twice to increase probability
-#         ]
-#         complication_type = random_stream.choice(complication_types)
-#
-#         # Generate a small random expression for the complication
-#         # For MULTIPLY_BY_ONE, exclude unknown to prevent creating quadratic equations
-#         exclude_unknown = complication_type == OperationType.MULTIPLY_BY_ONE
-#         # Increased complexity target from 2.0 to 4.0 to allow divisions to appear
-#         complication_expr = random_nonzero_expression(
-#             random_stream, 4.0, random_stream.randint(1, 5), exclude_unknown
-#         )
-#
-#         try:
-#             if complication_type == OperationType.ADD_ZERO:
-#                 # Add the same expression to both sides
-#                 current_equation = current_equation.add_to_sides(complication_expr)
-#             elif complication_type == OperationType.MULTIPLY_BY_ONE:
-#                 # Multiply both sides by the expression
-#                 current_equation = current_equation.multiply_sides_by(complication_expr)
-#             elif complication_type == OperationType.NEGATE:
-#                 # Apply negation to BOTH sides to maintain equation balance
-#                 # This preserves the solution while adding complexity
-#                 new_left = current_equation.left.negated()
-#                 new_right = current_equation.right.negated()
-#                 current_equation = Equals(new_left, new_right)
-#         except Exception:
-#             # If complication fails, skip it
-#             continue
-#
-#     return current_equation
-#
+def add_simple_complications(
+    random_stream: RandomClass, equation: Equals, num_complications: int
+) -> Equals:
+    """Add simple complications to an equation."""
+    current_equation = equation
+
+    for _ in range(num_complications):
+        # Choose a random complication type
+        complication_types = ["add_zero", "multiply_by_one", "negate"]
+        complication_type = random_stream.choice(complication_types)
+
+        # Generate a small random expression for the complication
+        try:
+            if complication_type == "add_zero":
+                # Add the same expression to both sides
+                complication_expr = random_expression(
+                    random_stream, 2.0, exclude_unknown=False
+                )
+                current_equation = current_equation.add_to_sides(
+                    complication_expr, left_side=random_stream.rand_coinflip(0.5)
+                )
+            elif complication_type == "multiply_by_one":
+                # Multiply both sides by the expression
+                complication_expr = random_expression(
+                    random_stream, 2.0, exclude_unknown=True
+                )
+                current_equation = current_equation.multiply_sides_by(
+                    complication_expr, left_side=random_stream.rand_coinflip(0.5)
+                )
+            elif complication_type == "negate":
+                # Apply negation to BOTH sides to maintain equation balance
+                from .expressions import ChangedSign
+
+                new_left = ChangedSign(current_equation.left)
+                new_right = ChangedSign(current_equation.right)
+                current_equation = Equals(new_left, new_right)
+        except Exception:
+            # If complication fails, skip it
+            continue
+
+    return current_equation
 
 
 @click.command()
@@ -149,13 +179,12 @@ def generate_equation(cost_target: float, seed: Optional[int]) -> None:
     - 8+: Complex equations with multiple complications
     """
     if seed is not None:
-        random.seed(seed)
+        random_stream = RandomClass.FromFixedSeed(seed)
+    else:
+        random_stream = RandomClass()
 
     # Generate a random solution between 1 and 10 (appropriate for 12-year-olds)
-    solution = random.randint(1, 10)
-
-    # Use the same seed for the random stream to ensure reproducibility
-    random_stream = random.Random(seed) if seed is not None else random.Random()
+    solution = random_stream.randint(1, 10)
 
     # Generate equation with target complexity
     equation = generate_equation_with_complexity(random_stream, solution, cost_target)

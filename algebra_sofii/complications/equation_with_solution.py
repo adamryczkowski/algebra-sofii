@@ -1,8 +1,6 @@
 # EquationWithSolution class for generating complex algebraic equations.
 from __future__ import annotations
 
-import random
-
 from .base import Complication
 from .config import EQUATION_COMPLICATION_WEIGHTS, COMPLICATION_CLASSES
 from ..expressions import Expression, Equals
@@ -59,9 +57,6 @@ class EquationWithSolution:
         self, max_complexity: float, random_stream: RandomClass
     ) -> None:
         """Add a random complication within complexity limits."""
-        if random_stream is None:
-            random_stream = random.Random()
-
         current_complexity = self._cached_current_form.complexity()
         remaining_complexity = max_complexity - current_complexity
 

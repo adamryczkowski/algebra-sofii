@@ -1,9 +1,9 @@
 """Tests for InsertBracketsComplication class."""
 
-import random
 import pytest
 from algebra_sofii.complications import InsertBracketsComplication
 from algebra_sofii.expressions import Integer, Unknown, Addition, ExpressionIndex
+from algebra_sofii import RandomClass
 
 
 def test_insert_brackets_complication_init():
@@ -77,7 +77,7 @@ def test_insert_brackets_complication_apply_with_negation():
 
 def test_insert_brackets_complication_randomize_from_stream():
     """Test static factory method for random generation."""
-    random_stream = random.Random(42)
+    random_stream = RandomClass.FromFixedSeed(42)
     # Create base expression with addition having 3+ operands
     base_expr = Addition([Unknown(), Integer(2), Integer(3)])
     complexity_budget = 3.0
@@ -92,7 +92,7 @@ def test_insert_brackets_complication_randomize_from_stream():
 
 def test_insert_brackets_complication_randomize_no_suitable_additions():
     """Test randomize_from_stream when no suitable additions exist."""
-    random_stream = random.Random(42)
+    random_stream = RandomClass.FromFixedSeed(42)
     # Base expression without additions with 3+ operands
     base_expr = Unknown()
     complexity_budget = 3.0
@@ -108,7 +108,7 @@ def test_insert_brackets_complication_randomize_no_suitable_additions():
 @pytest.mark.parametrize("complexity_budget", [1.0, 2.0, 3.0, 5.0])
 def test_insert_brackets_complication_respects_complexity_budget(complexity_budget):
     """Test that generated complications respect complexity budget."""
-    random_stream = random.Random(42)
+    random_stream = RandomClass.FromFixedSeed(42)
     base_expr = Addition([Unknown(), Integer(2), Integer(3)])
 
     complication = InsertBracketsComplication.randomize_from_stream(

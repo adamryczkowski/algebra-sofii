@@ -41,7 +41,7 @@ def test_multiply_equation_complication_apply():
     result = complication.apply(equation)
 
     # Should multiply both sides by 5
-    assert str(result) == "5*x = 5*10"
+    assert str(result) == "5 * x = 5 * 10"
 
 
 def test_multiply_equation_complication_apply_non_equation():
