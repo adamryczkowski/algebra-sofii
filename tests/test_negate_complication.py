@@ -19,8 +19,8 @@ def test_negate_complication_minimal_complexity():
     index = ExpressionIndex([0])
     complication = NegateComplication(index)
 
-    # Negate wraps expression in ChangedSign, adding 1.0 complexity
-    assert complication.minimal_complexity == 1.0
+    # Double negate wraps expression in two ChangedSign layers, adding 2.0 complexity
+    assert complication.minimal_complexity == 2.0
 
 
 def test_negate_complication_maximal_complexity():
@@ -29,7 +29,7 @@ def test_negate_complication_maximal_complexity():
     complication = NegateComplication(index)
 
     # For Negate, max is same as min since complexity is deterministic
-    assert complication.maximal_complexity == 1.0
+    assert complication.maximal_complexity == 2.0
 
 
 def test_negate_complication_apply():
@@ -41,12 +41,13 @@ def test_negate_complication_apply():
     original = Equals(Unknown(), Integer(5))
     result = complication.apply(original)
 
-    # Should create: -x = 5
+    # Should create: -(-x) = 5 (double negation, which is a no-op)
     assert isinstance(result, Equals)
     from algebra_sofii.expressions import ChangedSign
 
     assert isinstance(result.left, ChangedSign)
-    assert result.left.operand == Unknown()
+    assert isinstance(result.left.operand, ChangedSign)
+    assert result.left.operand.operand == Unknown()
 
 
 def test_negate_complication_randomize_from_stream():
@@ -67,7 +68,7 @@ def test_negate_complication_randomize_insufficient_budget():
     """Test randomize_from_stream with insufficient complexity budget."""
     random_stream = random.Random(42)
     base_expr = Unknown()
-    complexity_budget = 0.5  # Less than minimal_complexity of 1.0
+    complexity_budget = 1.5  # Less than minimal_complexity of 2.0
 
     result = NegateComplication.randomize_from_stream(
         random_stream, base_expr, complexity_budget
@@ -77,7 +78,7 @@ def test_negate_complication_randomize_insufficient_budget():
     assert result is None
 
 
-@pytest.mark.parametrize("complexity_budget", [1.0, 2.0, 3.0, 5.0])
+@pytest.mark.parametrize("complexity_budget", [2.0, 3.0, 5.0])
 def test_negate_complication_respects_complexity_budget(complexity_budget):
     """Test that generated complications respect complexity budget."""
     random_stream = random.Random(42)

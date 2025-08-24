@@ -23,18 +23,19 @@ class InvertComplication(Complication):
     @property
     def minimal_complexity(self) -> float:
         """Return the minimal complexity this complication will add."""
-        # Adds Inverted wrapper (1.0)
-        return 1.0
+        # Adds double Inverted wrapper (2.0) but it's a no-op
+        return 2.0
 
     @property
     def maximal_complexity(self) -> float:
         """Return the maximal complexity this complication can add."""
-        return 1.0
+        return 2.0
 
     def apply(self, expr: Expression) -> Expression:
-        """Apply the invert complication to the specified subexpression."""
+        """Apply the invert complication twice to the specified subexpression (no-op)."""
         target_expr = expr[self._index]
-        new_expr = Inverted(target_expr)
+        # Apply inversion twice to make it a no-op: 1/(1/expr) = expr
+        new_expr = Inverted(Inverted(target_expr))
         return expr.replace_with(self._index, new_expr)
 
     @staticmethod
@@ -44,8 +45,8 @@ class InvertComplication(Complication):
         complexity_budget: float,
     ) -> Optional["InvertComplication"]:
         """Create a random InvertComplication within the complexity budget."""
-        # Need at least 1.0 complexity
-        if complexity_budget < 1.0:
+        # Need at least 2.0 complexity for double inversion
+        if complexity_budget < 2.0:
             return None
 
         # Pick a random subexpression

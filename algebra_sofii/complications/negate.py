@@ -23,18 +23,19 @@ class NegateComplication(Complication):
     @property
     def minimal_complexity(self) -> float:
         """Return the minimal complexity this complication will add."""
-        # Adds ChangedSign wrapper (1.0)
-        return 1.0
+        # Adds double ChangedSign wrapper (2.0) but it's a no-op
+        return 2.0
 
     @property
     def maximal_complexity(self) -> float:
         """Return the maximal complexity this complication can add."""
-        return 1.0
+        return 2.0
 
     def apply(self, expr: Expression) -> Expression:
-        """Apply the negate complication to the specified subexpression."""
+        """Apply the negate complication twice to the specified subexpression (no-op)."""
         target_expr = expr[self._index]
-        new_expr = ChangedSign(target_expr)
+        # Apply negation twice to make it a no-op: -(-expr) = expr
+        new_expr = ChangedSign(ChangedSign(target_expr))
         return expr.replace_with(self._index, new_expr)
 
     @staticmethod
@@ -44,8 +45,8 @@ class NegateComplication(Complication):
         complexity_budget: float,
     ) -> Optional["NegateComplication"]:
         """Create a random NegateComplication within the complexity budget."""
-        # Need at least 1.0 complexity
-        if complexity_budget < 1.0:
+        # Need at least 2.0 complexity for double negation
+        if complexity_budget < 2.0:
             return None
 
         # Pick a random subexpression
